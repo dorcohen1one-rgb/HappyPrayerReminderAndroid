@@ -9,5 +9,6 @@ app/build/
 
 *.iml
 *.apk
+!apk-download/HappyPrayerReminder-debug.apk
 *.aab
 *.ap_
