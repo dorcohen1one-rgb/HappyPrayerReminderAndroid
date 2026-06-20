@@ -16,6 +16,18 @@ import java.util.Locale;
 final class ReminderScheduler {
     static final String PREFS = "happy_prayer_reminders";
     static final String DEFAULT_MESSAGE = "שכולם יהיו מאושרים ושמחים\nמכל העולם, מכל היצורים";
+    static final int SOUND_BELL = 0;
+    static final int SOUND_CALM_PAD = 1;
+    static final int SOUND_SOFT_CHIMES = 2;
+    static final int SOUND_VOICE = 3;
+    static final int SOUND_MANTRA = 4;
+    static final String[] SOUND_LABELS = {
+            "פעמון עדין",
+            "מוזיקה רגועה",
+            "צלצולים עדינים",
+            "קול שמקריא את ההודעה",
+            "מנטרה רגועה בקול"
+    };
     private static final int[][] DEFAULT_TIMES = {
             {9, 0},
             {14, 0},
@@ -228,6 +240,16 @@ final class ReminderScheduler {
 
     static void saveSoundSeconds(Context context, int seconds) {
         prefs(context).edit().putInt("sound_seconds", seconds).apply();
+    }
+
+    static int getSoundMode(Context context) {
+        int mode = prefs(context).getInt("sound_mode", SOUND_BELL);
+        if (mode < 0 || mode >= SOUND_LABELS.length) return SOUND_BELL;
+        return mode;
+    }
+
+    static void saveSoundMode(Context context, int mode) {
+        prefs(context).edit().putInt("sound_mode", mode).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -17,7 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public final class ReminderPopupActivity extends Activity {
-    private MediaPlayer player;
+    private ReminderSoundPlayer soundPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,8 +45,8 @@ public final class ReminderPopupActivity extends Activity {
     private View buildContent() {
         FrameLayout screen = new FrameLayout(this);
         GradientDrawable background = new GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.rgb(0, 137, 123), Color.rgb(245, 247, 248)}
+                GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(0, 137, 123), Color.rgb(230, 245, 242), Color.rgb(250, 245, 255)}
         );
         screen.setBackground(background);
         screen.setPadding(dp(18), dp(24), dp(18), dp(24));
@@ -58,8 +57,8 @@ public final class ReminderPopupActivity extends Activity {
         root.setPadding(dp(24), dp(28), dp(24), dp(28));
         GradientDrawable card = new GradientDrawable();
         card.setColor(Color.WHITE);
-        card.setCornerRadius(dp(24));
-        card.setStroke(dp(1), Color.rgb(220, 232, 232));
+        card.setCornerRadius(dp(28));
+        card.setStroke(dp(2), Color.rgb(210, 232, 229));
         root.setBackground(card);
 
         TextView smallTitle = new TextView(this);
@@ -72,15 +71,16 @@ public final class ReminderPopupActivity extends Activity {
 
         TextView heart = new TextView(this);
         heart.setText("♥");
-        heart.setTextSize(72);
+        heart.setTextSize(78);
         heart.setTextColor(Color.rgb(216, 27, 96));
         heart.setGravity(Gravity.CENTER);
         root.addView(heart);
 
         TextView message = new TextView(this);
         int slotId = getIntent().getIntExtra("slot_id", 0);
-        message.setText(ReminderScheduler.getMessage(this, slotId));
-        message.setTextSize(32);
+        String reminderMessage = ReminderScheduler.getMessage(this, slotId);
+        message.setText(reminderMessage);
+        message.setTextSize(34);
         message.setTextColor(Color.rgb(24, 28, 32));
         message.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         message.setGravity(Gravity.CENTER);
@@ -107,6 +107,12 @@ public final class ReminderPopupActivity extends Activity {
         Button closeButton = new Button(this);
         closeButton.setText("סגור");
         closeButton.setTextSize(20);
+        closeButton.setTextColor(Color.WHITE);
+        closeButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        GradientDrawable closeBackground = new GradientDrawable();
+        closeBackground.setColor(Color.rgb(0, 137, 123));
+        closeBackground.setCornerRadius(dp(16));
+        closeButton.setBackground(closeBackground);
         closeButton.setOnClickListener(v -> finish());
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -125,22 +131,22 @@ public final class ReminderPopupActivity extends Activity {
     }
 
     private void playSound() {
-        player = MediaPlayer.create(this, R.raw.gentle_bell);
-        if (player == null) return;
-
-        player.setLooping(true);
-        player.start();
+        int slotId = getIntent().getIntExtra("slot_id", 0);
+        soundPlayer = new ReminderSoundPlayer();
         int seconds = ReminderScheduler.getSoundSeconds(this);
+        soundPlayer.play(
+                this,
+                ReminderScheduler.getSoundMode(this),
+                ReminderScheduler.getMessage(this, slotId),
+                seconds
+        );
         getWindow().getDecorView().postDelayed(this::stopSound, seconds * 1000L);
     }
 
     private void stopSound() {
-        if (player == null) return;
-        if (player.isPlaying()) {
-            player.stop();
-        }
-        player.release();
-        player = null;
+        if (soundPlayer == null) return;
+        soundPlayer.stop();
+        soundPlayer = null;
     }
 
     private int dp(int value) {
