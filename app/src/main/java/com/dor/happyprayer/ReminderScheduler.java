@@ -12,10 +12,14 @@ import java.util.Calendar;
 
 final class ReminderScheduler {
     static final String PREFS = "happy_prayer_reminders";
+    static final String DEFAULT_MESSAGE = "שכולם יהיו מאושרים ושמחים\nמכל העולם, מכל היצורים";
     static final ReminderSlot[] SLOTS = {
             new ReminderSlot(1, "בוקר", 9, 0),
-            new ReminderSlot(2, "צהריים", 14, 0),
-            new ReminderSlot(3, "ערב", 20, 0)
+            new ReminderSlot(2, "לפני צהריים", 11, 30),
+            new ReminderSlot(3, "צהריים", 14, 0),
+            new ReminderSlot(4, "אחר הצהריים", 17, 0),
+            new ReminderSlot(5, "ערב", 20, 0),
+            new ReminderSlot(6, "לילה", 22, 30)
     };
 
     private ReminderScheduler() {
@@ -101,6 +105,34 @@ final class ReminderScheduler {
                 .putInt(key(slot, "hour"), hour)
                 .putInt(key(slot, "minute"), minute)
                 .apply();
+    }
+
+    static String getMessage(Context context) {
+        return prefs(context).getString("message", DEFAULT_MESSAGE);
+    }
+
+    static void saveMessage(Context context, String message) {
+        String trimmed = message == null ? "" : message.trim();
+        prefs(context)
+                .edit()
+                .putString("message", trimmed.isEmpty() ? DEFAULT_MESSAGE : trimmed)
+                .apply();
+    }
+
+    static boolean isPopupEnabled(Context context) {
+        return prefs(context).getBoolean("popup_enabled", true);
+    }
+
+    static void savePopupEnabled(Context context, boolean enabled) {
+        prefs(context).edit().putBoolean("popup_enabled", enabled).apply();
+    }
+
+    static int getSoundSeconds(Context context) {
+        return prefs(context).getInt("sound_seconds", 20);
+    }
+
+    static void saveSoundSeconds(Context context, int seconds) {
+        prefs(context).edit().putInt("sound_seconds", seconds).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

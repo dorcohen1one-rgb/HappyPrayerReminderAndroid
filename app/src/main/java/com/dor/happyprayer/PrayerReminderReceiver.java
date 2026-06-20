@@ -29,6 +29,16 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        Intent popupIntent = new Intent(context, ReminderPopupActivity.class);
+        popupIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent popupPendingIntent = PendingIntent.getActivity(
+                context,
+                3000 + intent.getIntExtra("slot_id", 0),
+                popupIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        String message = ReminderScheduler.getMessage(context);
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder = new Notification.Builder(context, CHANNEL_ID);
@@ -37,18 +47,34 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
         }
         builder.setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle("שכולם יהיו מאושרים ושמחים")
-                .setContentText("מכל העולם, מכל היצורים")
-                .setStyle(new Notification.BigTextStyle().bigText("שכולם יהיו מאושרים ושמחים מכל העולם, מכל היצורים"))
+                .setContentText(message)
+                .setStyle(new Notification.BigTextStyle().bigText(message))
+                .setCategory(Notification.CATEGORY_ALARM)
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setContentIntent(openPendingIntent)
+                .addAction(android.R.drawable.ic_dialog_info, "פתח", popupPendingIntent)
                 .setAutoCancel(true)
                 .setSound(soundUri(context));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder.setVisibility(Notification.VISIBILITY_PUBLIC);
+        }
+        if (ReminderScheduler.isPopupEnabled(context)) {
+            builder.setFullScreenIntent(popupPendingIntent, true);
+        }
 
         if (Build.VERSION.SDK_INT < 33 ||
                 context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (manager != null) {
                 manager.notify(2000 + intent.getIntExtra("slot_id", 0), builder.build());
+            }
+        }
+
+        if (ReminderScheduler.isPopupEnabled(context)) {
+            try {
+                context.startActivity(popupIntent);
+            } catch (RuntimeException ignored) {
+                // Some Android versions only allow the full-screen notification path from the background.
             }
         }
 
@@ -79,6 +105,7 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
         );
         channel.setDescription("תזכורות יומיות שכולם יהיו מאושרים ושמחים");
         channel.setSound(soundUri(context), attributes);
+        channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         manager.createNotificationChannel(channel);
     }
 

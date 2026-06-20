@@ -15,9 +15,13 @@ import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -65,6 +69,41 @@ public final class MainActivity extends Activity {
         body.setPadding(0, dp(8), 0, 0);
         prayerCard.addView(body);
 
+        LinearLayout messageCard = card();
+        messageCard.setGravity(Gravity.RIGHT);
+        root.addView(messageCard);
+
+        TextView messageTitle = text("הודעה שתופיע בתזכורת", 22, Color.rgb(24, 28, 32), Typeface.BOLD);
+        messageTitle.setGravity(Gravity.RIGHT);
+        messageCard.addView(messageTitle);
+
+        EditText messageEdit = new EditText(this);
+        messageEdit.setText(ReminderScheduler.getMessage(this));
+        messageEdit.setTextSize(18);
+        messageEdit.setTextColor(Color.rgb(24, 28, 32));
+        messageEdit.setGravity(Gravity.RIGHT | Gravity.TOP);
+        messageEdit.setTextDirection(View.TEXT_DIRECTION_RTL);
+        messageEdit.setMinLines(3);
+        messageEdit.setSingleLine(false);
+        messageEdit.setPadding(dp(10), dp(8), dp(10), dp(8));
+        messageCard.addView(messageEdit, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        ));
+
+        Button saveMessageButton = button("שמירת ההודעה");
+        saveMessageButton.setOnClickListener(v -> ReminderScheduler.saveMessage(this, messageEdit.getText().toString()));
+        messageCard.addView(saveMessageButton);
+
+        CheckBox popupCheckBox = new CheckBox(this);
+        popupCheckBox.setText("להקפיץ את ההודעה על המסך בזמן התזכורת");
+        popupCheckBox.setTextSize(17);
+        popupCheckBox.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        popupCheckBox.setTextDirection(View.TEXT_DIRECTION_RTL);
+        popupCheckBox.setChecked(ReminderScheduler.isPopupEnabled(this));
+        popupCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> ReminderScheduler.savePopupEnabled(this, isChecked));
+        messageCard.addView(popupCheckBox);
+
         LinearLayout remindersCard = card();
         remindersCard.setGravity(Gravity.RIGHT);
         root.addView(remindersCard);
@@ -97,8 +136,44 @@ public final class MainActivity extends Activity {
         soundText.setGravity(Gravity.RIGHT);
         soundCard.addView(soundText);
 
+        Spinner soundSpinner = new Spinner(this);
+        String[] soundOptions = {"10 שניות", "20 שניות", "30 שניות", "60 שניות"};
+        int[] soundValues = {10, 20, 30, 60};
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, soundOptions);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        soundSpinner.setAdapter(adapter);
+        int currentSeconds = ReminderScheduler.getSoundSeconds(this);
+        for (int i = 0; i < soundValues.length; i++) {
+            if (soundValues[i] == currentSeconds) {
+                soundSpinner.setSelection(i);
+                break;
+            }
+        }
+        soundSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                ReminderScheduler.saveSoundSeconds(MainActivity.this, soundValues[position]);
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            }
+        });
+        soundCard.addView(soundSpinner, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(52)
+        ));
+
         Button playButton = button("השמעת המנגינה");
-        playButton.setOnClickListener(v -> MediaPlayer.create(this, R.raw.gentle_bell).start());
+        playButton.setOnClickListener(v -> {
+            MediaPlayer player = MediaPlayer.create(this, R.raw.gentle_bell);
+            player.setLooping(true);
+            player.start();
+            playButton.postDelayed(() -> {
+                if (player.isPlaying()) player.stop();
+                player.release();
+            }, ReminderScheduler.getSoundSeconds(this) * 1000L);
+        });
         soundCard.addView(playButton);
 
         return scrollView;
