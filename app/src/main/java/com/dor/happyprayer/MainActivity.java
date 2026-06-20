@@ -25,6 +25,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import java.util.List;
 import java.util.Locale;
 
 public final class MainActivity extends Activity {
@@ -37,6 +38,10 @@ public final class MainActivity extends Activity {
         setContentView(buildContent());
         requestNotificationPermissionIfNeeded();
         ReminderScheduler.scheduleAll(this);
+    }
+
+    private void refreshContent() {
+        setContentView(buildContent());
     }
 
     private View buildContent() {
@@ -65,44 +70,9 @@ public final class MainActivity extends Activity {
         TextView subtitle = text("מכל העולם, מכל היצורים", 22, Color.rgb(76, 88, 94), Typeface.BOLD);
         prayerCard.addView(subtitle);
 
-        TextView body = text("הלוואי שכל מי שצריך אור, נחמה ושמחה יקבל אותם עכשיו.", 17, Color.rgb(84, 96, 102), Typeface.NORMAL);
+        TextView body = text("בחר כמה תזכורות שתרצה, שעה לכל תזכורת, והודעה אישית לכל שעה.", 17, Color.rgb(84, 96, 102), Typeface.NORMAL);
         body.setPadding(0, dp(8), 0, 0);
         prayerCard.addView(body);
-
-        LinearLayout messageCard = card();
-        messageCard.setGravity(Gravity.RIGHT);
-        root.addView(messageCard);
-
-        TextView messageTitle = text("הודעה שתופיע בתזכורת", 22, Color.rgb(24, 28, 32), Typeface.BOLD);
-        messageTitle.setGravity(Gravity.RIGHT);
-        messageCard.addView(messageTitle);
-
-        EditText messageEdit = new EditText(this);
-        messageEdit.setText(ReminderScheduler.getMessage(this));
-        messageEdit.setTextSize(18);
-        messageEdit.setTextColor(Color.rgb(24, 28, 32));
-        messageEdit.setGravity(Gravity.RIGHT | Gravity.TOP);
-        messageEdit.setTextDirection(View.TEXT_DIRECTION_RTL);
-        messageEdit.setMinLines(3);
-        messageEdit.setSingleLine(false);
-        messageEdit.setPadding(dp(10), dp(8), dp(10), dp(8));
-        messageCard.addView(messageEdit, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        ));
-
-        Button saveMessageButton = button("שמירת ההודעה");
-        saveMessageButton.setOnClickListener(v -> ReminderScheduler.saveMessage(this, messageEdit.getText().toString()));
-        messageCard.addView(saveMessageButton);
-
-        CheckBox popupCheckBox = new CheckBox(this);
-        popupCheckBox.setText("להקפיץ את ההודעה על המסך בזמן התזכורת");
-        popupCheckBox.setTextSize(17);
-        popupCheckBox.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        popupCheckBox.setTextDirection(View.TEXT_DIRECTION_RTL);
-        popupCheckBox.setChecked(ReminderScheduler.isPopupEnabled(this));
-        popupCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> ReminderScheduler.savePopupEnabled(this, isChecked));
-        messageCard.addView(popupCheckBox);
 
         LinearLayout remindersCard = card();
         remindersCard.setGravity(Gravity.RIGHT);
@@ -112,9 +82,27 @@ public final class MainActivity extends Activity {
         remindersTitle.setGravity(Gravity.RIGHT);
         remindersCard.addView(remindersTitle);
 
-        for (ReminderSlot slot : ReminderScheduler.SLOTS) {
+        List<ReminderSlot> slots = ReminderScheduler.getSlots(this);
+        for (ReminderSlot slot : slots) {
             remindersCard.addView(rowFor(slot));
         }
+
+        Button addReminderButton = button("הוספת תזכורת חדשה");
+        addReminderButton.setOnClickListener(v -> {
+            ReminderSlot slot = ReminderScheduler.addSlot(this);
+            ReminderScheduler.schedule(this, slot);
+            refreshContent();
+        });
+        remindersCard.addView(addReminderButton);
+
+        CheckBox popupCheckBox = new CheckBox(this);
+        popupCheckBox.setText("להקפיץ את ההודעה יפה על המסך בזמן התזכורת");
+        popupCheckBox.setTextSize(17);
+        popupCheckBox.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        popupCheckBox.setTextDirection(View.TEXT_DIRECTION_RTL);
+        popupCheckBox.setChecked(ReminderScheduler.isPopupEnabled(this));
+        popupCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> ReminderScheduler.savePopupEnabled(this, isChecked));
+        remindersCard.addView(popupCheckBox);
 
         Button permissionButton = button("לאשר התראות בטלפון");
         permissionButton.setOnClickListener(v -> requestNotificationPermissionIfNeeded());
@@ -181,22 +169,54 @@ public final class MainActivity extends Activity {
 
     private View rowFor(ReminderSlot slot) {
         LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
-        row.setPadding(0, dp(12), 0, dp(8));
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setGravity(Gravity.RIGHT);
+        row.setPadding(0, dp(14), 0, dp(10));
+
+        TextView label = text(slot.title, 18, Color.rgb(24, 28, 32), Typeface.BOLD);
+        label.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        row.addView(label);
+
+        LinearLayout controls = new LinearLayout(this);
+        controls.setOrientation(LinearLayout.HORIZONTAL);
+        controls.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
+        row.addView(controls);
 
         Button timeButton = new Button(this);
         timeButton.setText(timeText(ReminderScheduler.getHour(this, slot), ReminderScheduler.getMinute(this, slot)));
         timeButton.setTextSize(18);
-        row.addView(timeButton, new LinearLayout.LayoutParams(dp(128), dp(52)));
+        controls.addView(timeButton, new LinearLayout.LayoutParams(dp(112), dp(52)));
 
-        TextView label = text(slot.title, 18, Color.rgb(24, 28, 32), Typeface.BOLD);
-        label.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        row.addView(label, new LinearLayout.LayoutParams(0, dp(52), 1));
+        Button deleteButton = new Button(this);
+        deleteButton.setText("מחיקה");
+        deleteButton.setTextSize(15);
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(dp(92), dp(52));
+        deleteParams.setMargins(dp(8), 0, dp(8), 0);
+        controls.addView(deleteButton, deleteParams);
 
         Switch toggle = new Switch(this);
         toggle.setChecked(ReminderScheduler.isEnabled(this, slot));
-        row.addView(toggle);
+        controls.addView(toggle);
+
+        EditText messageEdit = new EditText(this);
+        messageEdit.setText(ReminderScheduler.getMessage(this, slot));
+        messageEdit.setTextSize(17);
+        messageEdit.setTextColor(Color.rgb(24, 28, 32));
+        messageEdit.setGravity(Gravity.RIGHT | Gravity.TOP);
+        messageEdit.setTextDirection(View.TEXT_DIRECTION_RTL);
+        messageEdit.setMinLines(2);
+        messageEdit.setSingleLine(false);
+        messageEdit.setPadding(dp(10), dp(8), dp(10), dp(8));
+        LinearLayout.LayoutParams messageParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        messageParams.setMargins(0, dp(8), 0, 0);
+        row.addView(messageEdit, messageParams);
+
+        Button saveMessageButton = button("שמירת ההודעה לשעה הזו");
+        saveMessageButton.setOnClickListener(v -> ReminderScheduler.saveMessage(this, slot, messageEdit.getText().toString()));
+        row.addView(saveMessageButton);
 
         CompoundButton.OnCheckedChangeListener saveToggle = (buttonView, isChecked) -> {
             int[] hm = parseTime(timeButton.getText().toString());
@@ -213,6 +233,11 @@ public final class MainActivity extends Activity {
                 ReminderScheduler.save(this, slot, toggle.isChecked(), hourOfDay, minute);
                 ReminderScheduler.scheduleAll(this);
             }, currentHour, currentMinute, true).show();
+        });
+
+        deleteButton.setOnClickListener(v -> {
+            ReminderScheduler.deleteSlot(this, slot);
+            refreshContent();
         });
 
         return row;

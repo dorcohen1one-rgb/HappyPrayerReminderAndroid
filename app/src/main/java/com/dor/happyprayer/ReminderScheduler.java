@@ -8,25 +8,25 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.provider.Settings;
 
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
+import java.util.Locale;
 
 final class ReminderScheduler {
     static final String PREFS = "happy_prayer_reminders";
     static final String DEFAULT_MESSAGE = "שכולם יהיו מאושרים ושמחים\nמכל העולם, מכל היצורים";
-    static final ReminderSlot[] SLOTS = {
-            new ReminderSlot(1, "בוקר", 9, 0),
-            new ReminderSlot(2, "לפני צהריים", 11, 30),
-            new ReminderSlot(3, "צהריים", 14, 0),
-            new ReminderSlot(4, "אחר הצהריים", 17, 0),
-            new ReminderSlot(5, "ערב", 20, 0),
-            new ReminderSlot(6, "לילה", 22, 30)
+    private static final int[][] DEFAULT_TIMES = {
+            {9, 0},
+            {14, 0},
+            {20, 0}
     };
 
     private ReminderScheduler() {
     }
 
     static void scheduleAll(Context context) {
-        for (ReminderSlot slot : SLOTS) {
+        for (ReminderSlot slot : getSlots(context)) {
             if (isEnabled(context, slot)) {
                 schedule(context, slot);
             } else {
@@ -107,6 +107,83 @@ final class ReminderScheduler {
                 .apply();
     }
 
+    static List<ReminderSlot> getSlots(Context context) {
+        SharedPreferences preferences = prefs(context);
+        String idsValue = preferences.getString("slot_ids", null);
+        if (idsValue == null || idsValue.trim().isEmpty()) {
+            initializeDefaultSlots(context);
+            idsValue = prefs(context).getString("slot_ids", "");
+        }
+
+        List<ReminderSlot> slots = new ArrayList<>();
+        String[] parts = idsValue.split(",");
+        for (String part : parts) {
+            if (part.trim().isEmpty()) continue;
+            int id;
+            try {
+                id = Integer.parseInt(part.trim());
+            } catch (NumberFormatException ignored) {
+                continue;
+            }
+            slots.add(new ReminderSlot(
+                    id,
+                    preferences.getString(key(id, "title"), "תזכורת " + id),
+                    preferences.getInt(key(id, "hour"), 9),
+                    preferences.getInt(key(id, "minute"), 0)
+            ));
+        }
+        return slots;
+    }
+
+    static ReminderSlot getSlot(Context context, int slotId) {
+        for (ReminderSlot slot : getSlots(context)) {
+            if (slot.id == slotId) return slot;
+        }
+        return null;
+    }
+
+    static ReminderSlot addSlot(Context context) {
+        SharedPreferences preferences = prefs(context);
+        int nextId = preferences.getInt("next_slot_id", 1);
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        int minute = 0;
+        int displayNumber = getSlots(context).size() + 1;
+        ReminderSlot slot = new ReminderSlot(nextId, "תזכורת " + displayNumber, hour, minute);
+
+        String ids = preferences.getString("slot_ids", "");
+        String newIds = ids == null || ids.trim().isEmpty() ? String.valueOf(nextId) : ids + "," + nextId;
+        preferences.edit()
+                .putString("slot_ids", newIds)
+                .putInt("next_slot_id", nextId + 1)
+                .putString(key(nextId, "title"), slot.title)
+                .putBoolean(key(nextId, "enabled"), true)
+                .putInt(key(nextId, "hour"), hour)
+                .putInt(key(nextId, "minute"), minute)
+                .putString(key(nextId, "message"), DEFAULT_MESSAGE)
+                .apply();
+        return slot;
+    }
+
+    static void deleteSlot(Context context, ReminderSlot slot) {
+        cancel(context, slot.id);
+        SharedPreferences preferences = prefs(context);
+        StringBuilder ids = new StringBuilder();
+        for (ReminderSlot existing : getSlots(context)) {
+            if (existing.id == slot.id) continue;
+            if (ids.length() > 0) ids.append(",");
+            ids.append(existing.id);
+        }
+        preferences.edit()
+                .putString("slot_ids", ids.toString())
+                .remove(key(slot.id, "title"))
+                .remove(key(slot.id, "enabled"))
+                .remove(key(slot.id, "hour"))
+                .remove(key(slot.id, "minute"))
+                .remove(key(slot.id, "message"))
+                .apply();
+        scheduleAll(context);
+    }
+
     static String getMessage(Context context) {
         return prefs(context).getString("message", DEFAULT_MESSAGE);
     }
@@ -116,6 +193,24 @@ final class ReminderScheduler {
         prefs(context)
                 .edit()
                 .putString("message", trimmed.isEmpty() ? DEFAULT_MESSAGE : trimmed)
+                .apply();
+    }
+
+    static String getMessage(Context context, ReminderSlot slot) {
+        return prefs(context).getString(key(slot, "message"), getMessage(context));
+    }
+
+    static String getMessage(Context context, int slotId) {
+        ReminderSlot slot = getSlot(context, slotId);
+        if (slot == null) return getMessage(context);
+        return getMessage(context, slot);
+    }
+
+    static void saveMessage(Context context, ReminderSlot slot, String message) {
+        String trimmed = message == null ? "" : message.trim();
+        prefs(context)
+                .edit()
+                .putString(key(slot, "message"), trimmed.isEmpty() ? DEFAULT_MESSAGE : trimmed)
                 .apply();
     }
 
@@ -140,6 +235,36 @@ final class ReminderScheduler {
     }
 
     private static String key(ReminderSlot slot, String name) {
-        return "slot_" + slot.id + "_" + name;
+        return key(slot.id, name);
+    }
+
+    private static String key(int slotId, String name) {
+        return "slot_" + slotId + "_" + name;
+    }
+
+    private static void initializeDefaultSlots(Context context) {
+        SharedPreferences preferences = prefs(context);
+        SharedPreferences.Editor editor = preferences.edit();
+        StringBuilder ids = new StringBuilder();
+        for (int i = 0; i < DEFAULT_TIMES.length; i++) {
+            int id = i + 1;
+            if (ids.length() > 0) ids.append(",");
+            ids.append(id);
+            editor.putString(key(id, "title"), defaultTitle(i));
+            editor.putBoolean(key(id, "enabled"), true);
+            editor.putInt(key(id, "hour"), preferences.getInt(key(id, "hour"), DEFAULT_TIMES[i][0]));
+            editor.putInt(key(id, "minute"), preferences.getInt(key(id, "minute"), DEFAULT_TIMES[i][1]));
+            editor.putString(key(id, "message"), preferences.getString(key(id, "message"), DEFAULT_MESSAGE));
+        }
+        editor.putString("slot_ids", ids.toString());
+        editor.putInt("next_slot_id", DEFAULT_TIMES.length + 1);
+        editor.apply();
+    }
+
+    private static String defaultTitle(int index) {
+        if (index == 0) return "בוקר";
+        if (index == 1) return "צהריים";
+        if (index == 2) return "ערב";
+        return String.format(Locale.US, "תזכורת %d", index + 1);
     }
 }

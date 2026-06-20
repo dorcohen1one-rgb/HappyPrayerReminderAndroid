@@ -19,6 +19,7 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         createChannel(context);
+        int slotId = intent.getIntExtra("slot_id", 0);
 
         Intent openIntent = new Intent(context, MainActivity.class);
         openIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -31,14 +32,15 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
 
         Intent popupIntent = new Intent(context, ReminderPopupActivity.class);
         popupIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        popupIntent.putExtra("slot_id", slotId);
         PendingIntent popupPendingIntent = PendingIntent.getActivity(
                 context,
-                3000 + intent.getIntExtra("slot_id", 0),
+                3000 + slotId,
                 popupIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
-        String message = ReminderScheduler.getMessage(context);
+        String message = ReminderScheduler.getMessage(context, slotId);
         Notification.Builder builder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             builder = new Notification.Builder(context, CHANNEL_ID);
@@ -66,7 +68,7 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
                 context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (manager != null) {
-                manager.notify(2000 + intent.getIntExtra("slot_id", 0), builder.build());
+                manager.notify(2000 + slotId, builder.build());
             }
         }
 
@@ -78,12 +80,9 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
             }
         }
 
-        int slotId = intent.getIntExtra("slot_id", 0);
-        for (ReminderSlot slot : ReminderScheduler.SLOTS) {
-            if (slot.id == slotId && ReminderScheduler.isEnabled(context, slot)) {
-                ReminderScheduler.schedule(context, slot);
-                break;
-            }
+        ReminderSlot slot = ReminderScheduler.getSlot(context, slotId);
+        if (slot != null && ReminderScheduler.isEnabled(context, slot)) {
+            ReminderScheduler.schedule(context, slot);
         }
     }
 
