@@ -26,7 +26,7 @@ final class ReminderScheduler {
             "מוזיקה רגועה",
             "צלצולים עדינים",
             "קול שמקריא את ההודעה",
-            "מנטרה רגועה בקול"
+            "מנטרה בקול עם מוזיקה"
     };
     private static final int[][] DEFAULT_TIMES = {
             {9, 0},
@@ -48,18 +48,15 @@ final class ReminderScheduler {
     }
 
     static void schedule(Context context, ReminderSlot slot) {
-        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (alarmManager == null) return;
+        scheduleAt(context, slot.id, nextTriggerMillis(context, slot));
+    }
 
-        Intent intent = new Intent(context, PrayerReminderReceiver.class);
-        intent.putExtra("slot_id", slot.id);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                context,
-                slot.id,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
+    static void scheduleInMinutes(Context context, int slotId, int minutes) {
+        int safeMinutes = Math.max(1, minutes);
+        scheduleAt(context, slotId, System.currentTimeMillis() + safeMinutes * 60_000L);
+    }
 
+    static long nextTriggerMillis(Context context, ReminderSlot slot) {
         Calendar calendar = Calendar.getInstance();
         calendar.set(Calendar.HOUR_OF_DAY, getHour(context, slot));
         calendar.set(Calendar.MINUTE, getMinute(context, slot));
@@ -68,13 +65,28 @@ final class ReminderScheduler {
         if (calendar.getTimeInMillis() <= System.currentTimeMillis()) {
             calendar.add(Calendar.DAY_OF_YEAR, 1);
         }
+        return calendar.getTimeInMillis();
+    }
+
+    private static void scheduleAt(Context context, int slotId, long triggerAtMillis) {
+        AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (alarmManager == null) return;
+
+        Intent intent = new Intent(context, PrayerReminderReceiver.class);
+        intent.putExtra("slot_id", slotId);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                context,
+                slotId,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) {
-            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
             return;
         }
 
-        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent);
     }
 
     static void cancel(Context context, int slotId) {

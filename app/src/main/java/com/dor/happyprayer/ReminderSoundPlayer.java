@@ -1,6 +1,8 @@
 package com.dor.happyprayer;
 
 import android.content.Context;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,13 +13,19 @@ import java.util.Locale;
 
 final class ReminderSoundPlayer {
     private MediaPlayer mediaPlayer;
+    private MediaPlayer voicePlayer;
     private TextToSpeech textToSpeech;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     void play(Context context, int soundMode, String message, int seconds) {
         stop();
-        if (soundMode == ReminderScheduler.SOUND_VOICE || soundMode == ReminderScheduler.SOUND_MANTRA) {
-            speak(context, soundMode, message);
+        if (soundMode == ReminderScheduler.SOUND_MANTRA) {
+            playLoopingSound(context, R.raw.calm_pad, 0.42f);
+            playVoice(context, R.raw.mantra_voice, 1.0f);
+            return;
+        }
+        if (soundMode == ReminderScheduler.SOUND_VOICE) {
+            playVoice(context, R.raw.default_voice, 1.0f);
             return;
         }
 
@@ -28,10 +36,26 @@ final class ReminderSoundPlayer {
             soundResource = R.raw.soft_chimes;
         }
 
-        mediaPlayer = MediaPlayer.create(context, soundResource);
+        playLoopingSound(context, soundResource, 1.0f);
+    }
+
+    private void playLoopingSound(Context context, int soundResource, float volume) {
+        mediaPlayer = MediaPlayer.create(context.getApplicationContext(), soundResource);
         if (mediaPlayer == null) return;
+        mediaPlayer.setVolume(volume, volume);
         mediaPlayer.setLooping(true);
         mediaPlayer.start();
+    }
+
+    private void playVoice(Context context, int soundResource, float volume) {
+        voicePlayer = MediaPlayer.create(context.getApplicationContext(), soundResource);
+        if (voicePlayer == null) {
+            speak(context, ReminderScheduler.SOUND_VOICE, ReminderScheduler.DEFAULT_MESSAGE);
+            return;
+        }
+        voicePlayer.setVolume(volume, volume);
+        voicePlayer.setLooping(false);
+        voicePlayer.start();
     }
 
     void stop() {
@@ -41,6 +65,13 @@ final class ReminderSoundPlayer {
             }
             mediaPlayer.release();
             mediaPlayer = null;
+        }
+        if (voicePlayer != null) {
+            if (voicePlayer.isPlaying()) {
+                voicePlayer.stop();
+            }
+            voicePlayer.release();
+            voicePlayer = null;
         }
         if (textToSpeech != null) {
             textToSpeech.stop();
@@ -60,21 +91,45 @@ final class ReminderSoundPlayer {
 
         textToSpeech = new TextToSpeech(context.getApplicationContext(), status -> {
             mainHandler.post(() -> {
-                if (status != TextToSpeech.SUCCESS || textToSpeech == null) return;
+                if (status != TextToSpeech.SUCCESS || textToSpeech == null) {
+                    playFallbackIfSilent(context);
+                    return;
+                }
 
                 int languageResult = textToSpeech.setLanguage(new Locale("he", "IL"));
                 if (languageResult == TextToSpeech.LANG_MISSING_DATA ||
                         languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    textToSpeech.setLanguage(Locale.getDefault());
+                    int defaultLanguageResult = textToSpeech.setLanguage(Locale.getDefault());
+                    if (defaultLanguageResult == TextToSpeech.LANG_MISSING_DATA ||
+                            defaultLanguageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        playFallbackIfSilent(context);
+                        return;
+                    }
                 }
 
                 textToSpeech.setSpeechRate(0.78f);
                 textToSpeech.setPitch(0.95f);
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                    AudioAttributes attributes = new AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_ALARM)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build();
+                    textToSpeech.setAudioAttributes(attributes);
+                }
 
                 Bundle params = new Bundle();
                 params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f);
-                textToSpeech.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, params, "happy_prayer_voice");
+                params.putString(TextToSpeech.Engine.KEY_PARAM_STREAM, String.valueOf(AudioManager.STREAM_MUSIC));
+                int result = textToSpeech.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, params, "happy_prayer_voice");
+                if (result == TextToSpeech.ERROR) {
+                    playFallbackIfSilent(context);
+                }
             });
         });
+    }
+
+    private void playFallbackIfSilent(Context context) {
+        if (mediaPlayer != null) return;
+        playLoopingSound(context, R.raw.gentle_bell, 1.0f);
     }
 }

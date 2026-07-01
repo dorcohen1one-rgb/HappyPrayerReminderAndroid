@@ -3,6 +3,7 @@ package com.dor.happyprayer;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -21,16 +22,22 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Spinner;
-import android.widget.ArrayAdapter;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
 public final class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 42;
+    private static final int INK = Color.rgb(17, 24, 39);
+    private static final int MUTED = Color.rgb(91, 104, 114);
+    private static final int TEAL = Color.rgb(0, 137, 123);
+    private static final int ROSE = Color.rgb(216, 27, 96);
+    private static final int GOLD = Color.rgb(191, 138, 0);
     private ReminderSoundPlayer previewPlayer;
 
     @Override
@@ -55,7 +62,7 @@ public final class MainActivity extends Activity {
     private View buildContent() {
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackground(gradient(Color.rgb(232, 248, 246), Color.rgb(250, 245, 255)));
+        scrollView.setBackground(gradient(Color.rgb(228, 247, 244), Color.rgb(255, 250, 236), Color.rgb(245, 241, 255)));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -63,30 +70,66 @@ public final class MainActivity extends Activity {
         root.setPadding(dp(16), dp(22), dp(16), dp(28));
         scrollView.addView(root);
 
-        LinearLayout prayerCard = card(Color.WHITE, Color.rgb(210, 232, 229), 24);
+        LinearLayout prayerCard = gradientCard(
+                new int[]{Color.rgb(255, 255, 255), Color.rgb(239, 251, 248), Color.rgb(255, 247, 232)},
+                Color.rgb(188, 224, 218),
+                28
+        );
         prayerCard.setGravity(Gravity.CENTER_HORIZONTAL);
+        prayerCard.setPadding(dp(20), dp(24), dp(20), dp(24));
         root.addView(prayerCard);
 
-        TextView heart = text("♥", 62, Color.rgb(216, 27, 96), Typeface.BOLD);
+        TextView heart = text("♥", 70, ROSE, Typeface.BOLD);
         prayerCard.addView(heart);
 
-        TextView title = text("שכולם יהיו מאושרים ושמחים", 34, Color.rgb(18, 32, 35), Typeface.BOLD);
+        TextView title = text("שכולם יהיו מאושרים ושמחים", 36, INK, Typeface.BOLD);
         title.setMaxLines(3);
         title.setEllipsize(null);
         prayerCard.addView(title);
 
-        TextView subtitle = text("תזכורות אישיות עם צליל, קול ומסך יפה", 20, Color.rgb(0, 105, 92), Typeface.BOLD);
+        TextView subtitle = text("תזכורות אישיות עם מנטרה, קול ומסך נעים", 20, TEAL, Typeface.BOLD);
         prayerCard.addView(subtitle);
 
-        TextView body = text("בחר כמה תזכורות שתרצה, שעה לכל תזכורת, והודעה אישית לכל שעה.", 17, Color.rgb(84, 96, 102), Typeface.NORMAL);
+        TextView body = text("בחר כמה תזכורות שתרצה, שעה לכל תזכורת, והודעה אישית לכל רגע ביום.", 17, MUTED, Typeface.NORMAL);
         body.setPadding(0, dp(8), 0, 0);
         prayerCard.addView(body);
 
-        LinearLayout remindersCard = card(Color.WHITE, Color.rgb(226, 235, 238), 20);
+        prayerCard.addView(metricRow());
+
+        LinearLayout statusCard = gradientCard(
+                new int[]{Color.rgb(19, 44, 47), Color.rgb(0, 105, 92)},
+                Color.rgb(168, 218, 210),
+                22
+        );
+        statusCard.setGravity(Gravity.RIGHT);
+        root.addView(statusCard);
+
+        TextView statusTitle = text("מה קורה היום", 22, Color.WHITE, Typeface.BOLD);
+        statusTitle.setGravity(Gravity.RIGHT);
+        statusCard.addView(statusTitle);
+
+        TextView nextReminder = text(nextReminderSummary(), 18, Color.rgb(232, 248, 246), Typeface.BOLD);
+        nextReminder.setGravity(Gravity.RIGHT);
+        LinearLayout.LayoutParams nextParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        nextParams.setMargins(0, dp(8), 0, 0);
+        statusCard.addView(nextReminder, nextParams);
+
+        TextView permissionStatus = text(permissionSummary(), 15, Color.rgb(222, 245, 241), Typeface.NORMAL);
+        permissionStatus.setGravity(Gravity.RIGHT);
+        statusCard.addView(permissionStatus);
+
+        Button testButton = primaryButton("בדיקת תזכורת עכשיו");
+        testButton.setOnClickListener(v -> openTestReminder());
+        statusCard.addView(testButton);
+
+        LinearLayout remindersCard = card(Color.WHITE, Color.rgb(221, 231, 235), 20);
         remindersCard.setGravity(Gravity.RIGHT);
         root.addView(remindersCard);
 
-        TextView remindersTitle = text("זמני תזכורת", 22, Color.rgb(24, 28, 32), Typeface.BOLD);
+        TextView remindersTitle = text("זמני תזכורת", 22, INK, Typeface.BOLD);
         remindersTitle.setGravity(Gravity.RIGHT);
         remindersCard.addView(remindersTitle);
 
@@ -120,65 +163,24 @@ public final class MainActivity extends Activity {
         alarmButton.setOnClickListener(v -> openExactAlarmSettingsIfNeeded());
         remindersCard.addView(alarmButton);
 
-        LinearLayout soundCard = card(Color.WHITE, Color.rgb(226, 235, 238), 20);
+        LinearLayout soundCard = gradientCard(
+                new int[]{Color.WHITE, Color.rgb(250, 253, 252)},
+                Color.rgb(221, 231, 235),
+                20
+        );
         soundCard.setGravity(Gravity.RIGHT);
         root.addView(soundCard);
 
-        TextView soundTitle = text("מנגינה", 22, Color.rgb(24, 28, 32), Typeface.BOLD);
+        TextView soundTitle = text("צליל וקול", 22, INK, Typeface.BOLD);
         soundTitle.setGravity(Gravity.RIGHT);
         soundCard.addView(soundTitle);
 
-        TextView soundText = text("בחר מה יישמע כשהתזכורת קופצת: צליל, מוזיקה רגועה, או קול שמקריא את ההודעה.", 16, Color.rgb(84, 96, 102), Typeface.NORMAL);
+        TextView soundText = text("בחר מה יישמע כשהתזכורת קופצת: פעמון, מוזיקה רגועה, קול שמקריא את ההודעה, או מנטרה עם רקע שקט.", 16, MUTED, Typeface.NORMAL);
         soundText.setGravity(Gravity.RIGHT);
         soundCard.addView(soundText);
 
-        Spinner soundModeSpinner = new Spinner(this);
-        ArrayAdapter<String> soundModeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, ReminderScheduler.SOUND_LABELS);
-        soundModeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        soundModeSpinner.setAdapter(soundModeAdapter);
-        soundModeSpinner.setSelection(ReminderScheduler.getSoundMode(this));
-        soundModeSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                ReminderScheduler.saveSoundMode(MainActivity.this, position);
-            }
-
-            @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
-            }
-        });
-        soundCard.addView(soundModeSpinner, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
-        ));
-
-        Spinner soundSpinner = new Spinner(this);
-        String[] soundOptions = {"10 שניות", "20 שניות", "30 שניות", "60 שניות"};
-        int[] soundValues = {10, 20, 30, 60};
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, soundOptions);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        soundSpinner.setAdapter(adapter);
-        int currentSeconds = ReminderScheduler.getSoundSeconds(this);
-        for (int i = 0; i < soundValues.length; i++) {
-            if (soundValues[i] == currentSeconds) {
-                soundSpinner.setSelection(i);
-                break;
-            }
-        }
-        soundSpinner.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
-                ReminderScheduler.saveSoundSeconds(MainActivity.this, soundValues[position]);
-            }
-
-            @Override
-            public void onNothingSelected(android.widget.AdapterView<?> parent) {
-            }
-        });
-        soundCard.addView(soundSpinner, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(52)
-        ));
+        soundCard.addView(soundModeOptions());
+        soundCard.addView(durationOptions());
 
         Button playButton = primaryButton("השמעת הצליל שבחרתי");
         playButton.setOnClickListener(v -> {
@@ -196,6 +198,12 @@ public final class MainActivity extends Activity {
         });
         soundCard.addView(playButton);
 
+        Button stopPreviewButton = secondaryButton("עצירת השמעה");
+        stopPreviewButton.setOnClickListener(v -> {
+            if (previewPlayer != null) previewPlayer.stop();
+        });
+        soundCard.addView(stopPreviewButton);
+
         Button voiceSettingsButton = secondaryButton("הגדרות קול בטלפון");
         voiceSettingsButton.setOnClickListener(v -> {
             try {
@@ -209,12 +217,86 @@ public final class MainActivity extends Activity {
         return scrollView;
     }
 
+    private View metricRow() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, dp(18), 0, 0);
+        row.setLayoutParams(params);
+
+        List<ReminderSlot> slots = ReminderScheduler.getSlots(this);
+        int active = 0;
+        for (ReminderSlot slot : slots) {
+            if (ReminderScheduler.isEnabled(this, slot)) active++;
+        }
+        row.addView(chip("פעילות " + active, Color.rgb(232, 248, 246), TEAL), new LinearLayout.LayoutParams(0, dp(44), 1));
+        row.addView(chip(ReminderScheduler.SOUND_LABELS[ReminderScheduler.getSoundMode(this)], Color.rgb(255, 247, 232), GOLD), new LinearLayout.LayoutParams(0, dp(44), 1));
+        row.addView(chip(ReminderScheduler.isPopupEnabled(this) ? "מסך קופץ" : "התראה בלבד", Color.rgb(255, 239, 246), ROSE), new LinearLayout.LayoutParams(0, dp(44), 1));
+        return row;
+    }
+
+    private View soundModeOptions() {
+        LinearLayout options = new LinearLayout(this);
+        options.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, dp(12), 0, 0);
+        options.setLayoutParams(params);
+
+        int selected = ReminderScheduler.getSoundMode(this);
+        for (int i = 0; i < ReminderScheduler.SOUND_LABELS.length; i++) {
+            final int mode = i;
+            Button option = selectableButton(ReminderScheduler.SOUND_LABELS[i], i == selected);
+            option.setOnClickListener(v -> {
+                ReminderScheduler.saveSoundMode(this, mode);
+                Toast.makeText(this, "הצליל נבחר", Toast.LENGTH_SHORT).show();
+                refreshContent();
+            });
+            options.addView(option);
+        }
+        return options;
+    }
+
+    private View durationOptions() {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        params.setMargins(0, dp(8), 0, 0);
+        row.setLayoutParams(params);
+
+        String[] labels = {"10 ש׳", "20 ש׳", "30 ש׳", "60 ש׳"};
+        int[] values = {10, 20, 30, 60};
+        int selected = ReminderScheduler.getSoundSeconds(this);
+        for (int i = 0; i < values.length; i++) {
+            final int seconds = values[i];
+            Button option = selectableButton(labels[i], seconds == selected);
+            option.setTextSize(14);
+            option.setOnClickListener(v -> {
+                ReminderScheduler.saveSoundSeconds(this, seconds);
+                Toast.makeText(this, "משך הצליל נשמר", Toast.LENGTH_SHORT).show();
+                refreshContent();
+            });
+            row.addView(option, new LinearLayout.LayoutParams(0, dp(48), 1));
+        }
+        return row;
+    }
+
     private View rowFor(ReminderSlot slot) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
         row.setGravity(Gravity.RIGHT);
-        row.setPadding(dp(12), dp(14), dp(12), dp(12));
-        row.setBackground(cardBackground(Color.rgb(250, 253, 253), Color.rgb(226, 235, 238), 18));
+        row.setPadding(dp(14), dp(16), dp(14), dp(14));
+        row.setBackground(cardBackground(Color.rgb(251, 254, 253), Color.rgb(222, 233, 236), 18));
         LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -222,13 +304,13 @@ public final class MainActivity extends Activity {
         rowParams.setMargins(0, dp(12), 0, 0);
         row.setLayoutParams(rowParams);
 
-        TextView label = text(slot.title, 18, Color.rgb(24, 28, 32), Typeface.BOLD);
+        TextView label = text(slot.title, 19, INK, Typeface.BOLD);
         label.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         row.addView(label);
 
         Button timeButton = secondaryButton(timeText(ReminderScheduler.getHour(this, slot), ReminderScheduler.getMinute(this, slot)));
         timeButton.setText(timeText(ReminderScheduler.getHour(this, slot), ReminderScheduler.getMinute(this, slot)));
-        timeButton.setTextSize(24);
+        timeButton.setTextSize(27);
         row.addView(timeButton, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(58)
@@ -275,7 +357,7 @@ public final class MainActivity extends Activity {
         EditText messageEdit = new EditText(this);
         messageEdit.setText(ReminderScheduler.getMessage(this, slot));
         messageEdit.setTextSize(17);
-        messageEdit.setTextColor(Color.rgb(24, 28, 32));
+        messageEdit.setTextColor(INK);
         messageEdit.setGravity(Gravity.RIGHT | Gravity.TOP);
         messageEdit.setTextDirection(View.TEXT_DIRECTION_RTL);
         messageEdit.setMinLines(2);
@@ -289,7 +371,10 @@ public final class MainActivity extends Activity {
         row.addView(messageEdit, messageParams);
 
         Button saveMessageButton = primaryButton("שמירת ההודעה לשעה הזו");
-        saveMessageButton.setOnClickListener(v -> ReminderScheduler.saveMessage(this, slot, messageEdit.getText().toString()));
+        saveMessageButton.setOnClickListener(v -> {
+            ReminderScheduler.saveMessage(this, slot, messageEdit.getText().toString());
+            Toast.makeText(this, "ההודעה נשמרה", Toast.LENGTH_SHORT).show();
+        });
         row.addView(saveMessageButton);
 
         CompoundButton.OnCheckedChangeListener saveToggle = (buttonView, isChecked) -> {
@@ -315,8 +400,16 @@ public final class MainActivity extends Activity {
         minuteMinus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, -5));
 
         deleteButton.setOnClickListener(v -> {
-            ReminderScheduler.deleteSlot(this, slot);
-            refreshContent();
+            new AlertDialog.Builder(this)
+                    .setTitle("למחוק את התזכורת?")
+                    .setMessage(slot.title)
+                    .setPositiveButton("מחיקה", (dialog, which) -> {
+                        ReminderScheduler.deleteSlot(this, slot);
+                        Toast.makeText(this, "התזכורת נמחקה", Toast.LENGTH_SHORT).show();
+                        refreshContent();
+                    })
+                    .setNegativeButton("ביטול", null)
+                    .show();
         });
 
         return row;
@@ -341,8 +434,17 @@ public final class MainActivity extends Activity {
         return card;
     }
 
-    private GradientDrawable gradient(int top, int bottom) {
-        return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, new int[]{top, bottom});
+    private LinearLayout gradientCard(int[] colors, int strokeColor, int radiusDp) {
+        LinearLayout card = card(Color.WHITE, strokeColor, radiusDp);
+        GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR, colors);
+        drawable.setCornerRadius(dp(radiusDp));
+        drawable.setStroke(dp(1), strokeColor);
+        card.setBackground(drawable);
+        return card;
+    }
+
+    private GradientDrawable gradient(int... colors) {
+        return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors);
     }
 
     private GradientDrawable cardBackground(int color, int strokeColor, int radiusDp) {
@@ -370,7 +472,7 @@ public final class MainActivity extends Activity {
     }
 
     private Button primaryButton(String label) {
-        return styledButton(label, Color.rgb(0, 137, 123), Color.WHITE, 18);
+        return styledButton(label, TEAL, Color.WHITE, 18);
     }
 
     private Button secondaryButton(String label) {
@@ -386,6 +488,32 @@ public final class MainActivity extends Activity {
         params.setMargins(dp(3), 0, dp(3), 0);
         button.setLayoutParams(params);
         return button;
+    }
+
+    private Button selectableButton(String label, boolean selected) {
+        int background = selected ? Color.rgb(0, 105, 92) : Color.rgb(246, 253, 251);
+        int foreground = selected ? Color.WHITE : INK;
+        int stroke = selected ? Color.rgb(0, 105, 92) : Color.rgb(214, 232, 229);
+        Button button = styledButton(label, background, foreground, 16);
+        button.setGravity(Gravity.CENTER);
+        button.setTextDirection(View.TEXT_DIRECTION_RTL);
+        button.setBackground(cardBackground(background, stroke, 16));
+        return button;
+    }
+
+    private TextView chip(String label, int backgroundColor, int textColor) {
+        TextView chip = text(label, 13, textColor, Typeface.BOLD);
+        chip.setGravity(Gravity.CENTER);
+        chip.setSingleLine(true);
+        chip.setEllipsize(TextUtils.TruncateAt.END);
+        chip.setBackground(cardBackground(backgroundColor, Color.TRANSPARENT, 22));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(44)
+        );
+        params.setMargins(dp(3), 0, dp(3), 0);
+        chip.setLayoutParams(params);
+        return chip;
     }
 
     private Button styledButton(String label, int backgroundColor, int textColor, int textSize) {
@@ -433,6 +561,47 @@ public final class MainActivity extends Activity {
                 if (intent != null) startActivity(intent);
             }
         }
+    }
+
+    private void openTestReminder() {
+        List<ReminderSlot> slots = ReminderScheduler.getSlots(this);
+        int slotId = slots.isEmpty() ? 0 : slots.get(0).id;
+        Intent intent = new Intent(this, ReminderPopupActivity.class);
+        intent.putExtra("slot_id", slotId);
+        intent.putExtra("is_test", true);
+        startActivity(intent);
+    }
+
+    private String nextReminderSummary() {
+        List<ReminderSlot> slots = ReminderScheduler.getSlots(this);
+        ReminderSlot nextSlot = null;
+        long nextMillis = Long.MAX_VALUE;
+        for (ReminderSlot slot : slots) {
+            if (!ReminderScheduler.isEnabled(this, slot)) continue;
+            long trigger = ReminderScheduler.nextTriggerMillis(this, slot);
+            if (trigger < nextMillis) {
+                nextMillis = trigger;
+                nextSlot = slot;
+            }
+        }
+        if (nextSlot == null) return "אין כרגע תזכורות פעילות";
+
+        String time = DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(nextMillis));
+        return "התזכורת הבאה: " + nextSlot.title + " בשעה " + time;
+    }
+
+    private String permissionSummary() {
+        boolean notificationsOk = Build.VERSION.SDK_INT < 33 ||
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+        boolean exactOk = true;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager alarmManager = getSystemService(AlarmManager.class);
+            exactOk = alarmManager == null || alarmManager.canScheduleExactAlarms();
+        }
+        if (notificationsOk && exactOk) return "ההתראות והדיוק מוכנים";
+        if (!notificationsOk && !exactOk) return "צריך לאשר התראות וגם דיוק תזכורות";
+        if (!notificationsOk) return "צריך לאשר התראות בטלפון";
+        return "מומלץ לאשר דיוק תזכורות";
     }
 
     private String timeText(int hour, int minute) {
