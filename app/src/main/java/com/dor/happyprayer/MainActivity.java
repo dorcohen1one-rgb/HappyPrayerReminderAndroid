@@ -11,6 +11,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.speech.tts.TextToSpeech;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
@@ -182,17 +183,28 @@ public final class MainActivity extends Activity {
         Button playButton = primaryButton("השמעת הצליל שבחרתי");
         playButton.setOnClickListener(v -> {
             if (previewPlayer == null) previewPlayer = new ReminderSoundPlayer();
+            int playbackSeconds = ReminderScheduler.getPlaybackSeconds(this);
             previewPlayer.play(
                     this,
                     ReminderScheduler.getSoundMode(this),
                     ReminderScheduler.getMessage(this),
-                    ReminderScheduler.getSoundSeconds(this)
+                    playbackSeconds
             );
             playButton.postDelayed(() -> {
                 if (previewPlayer != null) previewPlayer.stop();
-            }, ReminderScheduler.getSoundSeconds(this) * 1000L);
+            }, playbackSeconds * 1000L);
         });
         soundCard.addView(playButton);
+
+        Button voiceSettingsButton = secondaryButton("הגדרות קול בטלפון");
+        voiceSettingsButton.setOnClickListener(v -> {
+            try {
+                startActivity(new Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA));
+            } catch (RuntimeException ignored) {
+                startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));
+            }
+        });
+        soundCard.addView(voiceSettingsButton);
 
         return scrollView;
     }

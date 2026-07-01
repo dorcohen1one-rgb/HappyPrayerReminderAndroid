@@ -133,7 +133,7 @@ public final class ReminderPopupActivity extends Activity {
     private void playSound() {
         int slotId = getIntent().getIntExtra("slot_id", 0);
         soundPlayer = new ReminderSoundPlayer();
-        int seconds = ReminderScheduler.getSoundSeconds(this);
+        int seconds = ReminderScheduler.getPlaybackSeconds(this);
         soundPlayer.play(
                 this,
                 ReminderScheduler.getSoundMode(this),

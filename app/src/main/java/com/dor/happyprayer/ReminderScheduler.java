@@ -242,6 +242,15 @@ final class ReminderScheduler {
         prefs(context).edit().putInt("sound_seconds", seconds).apply();
     }
 
+    static int getPlaybackSeconds(Context context) {
+        int seconds = getSoundSeconds(context);
+        int mode = getSoundMode(context);
+        if (mode == SOUND_VOICE || mode == SOUND_MANTRA) {
+            return Math.max(seconds, 35);
+        }
+        return seconds;
+    }
+
     static int getSoundMode(Context context) {
         int mode = prefs(context).getInt("sound_mode", SOUND_BELL);
         if (mode < 0 || mode >= SOUND_LABELS.length) return SOUND_BELL;
