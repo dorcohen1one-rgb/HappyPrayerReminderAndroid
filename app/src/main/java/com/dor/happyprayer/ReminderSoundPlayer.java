@@ -20,12 +20,13 @@ final class ReminderSoundPlayer {
     void play(Context context, int soundMode, String message, int seconds) {
         stop();
         if (soundMode == ReminderScheduler.SOUND_MANTRA) {
-            playLoopingSound(context, R.raw.calm_pad, 0.42f);
-            playVoice(context, R.raw.mantra_voice, 1.0f);
+            playLoopingSound(context, R.raw.calm_pad, 0.36f);
+            playVoice(context, R.raw.mantra_voice, 0.96f);
             return;
         }
         if (soundMode == ReminderScheduler.SOUND_VOICE) {
-            playVoice(context, R.raw.default_voice, 1.0f);
+            playLoopingSound(context, R.raw.calm_pad, 0.22f);
+            playVoice(context, R.raw.default_voice, 0.98f);
             return;
         }
 
