@@ -7,15 +7,19 @@ import android.app.AlertDialog;
 import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.speech.tts.TextToSpeech;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -43,6 +47,7 @@ public final class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        styleSystemBars();
 
         setContentView(buildContent());
         requestNotificationPermissionIfNeeded();
@@ -62,42 +67,45 @@ public final class MainActivity extends Activity {
     private View buildContent() {
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackground(gradient(Color.rgb(228, 247, 244), Color.rgb(255, 250, 236), Color.rgb(245, 241, 255)));
+        scrollView.setBackground(gradient(Color.rgb(218, 245, 241), Color.rgb(255, 250, 237), Color.rgb(246, 241, 255)));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(dp(16), dp(22), dp(16), dp(28));
+        root.setPadding(dp(14), dp(18), dp(14), dp(28));
         scrollView.addView(root);
 
         LinearLayout prayerCard = gradientCard(
-                new int[]{Color.rgb(255, 255, 255), Color.rgb(239, 251, 248), Color.rgb(255, 247, 232)},
-                Color.rgb(188, 224, 218),
-                28
+                new int[]{Color.rgb(255, 255, 255), Color.rgb(238, 252, 248), Color.rgb(255, 246, 227)},
+                Color.rgb(177, 222, 214),
+                26
         );
         prayerCard.setGravity(Gravity.CENTER_HORIZONTAL);
-        prayerCard.setPadding(dp(20), dp(24), dp(20), dp(24));
+        prayerCard.setPadding(dp(18), dp(20), dp(18), dp(22));
         root.addView(prayerCard);
 
-        TextView heart = text("♥", 70, ROSE, Typeface.BOLD);
-        prayerCard.addView(heart);
+        AmbientHeartView ambientHeartView = new AmbientHeartView(this);
+        prayerCard.addView(ambientHeartView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(172)
+        ));
 
-        TextView title = text("שכולם יהיו מאושרים ושמחים", 36, INK, Typeface.BOLD);
+        TextView title = text("שכולם יהיו מאושרים ושמחים", 34, INK, Typeface.BOLD);
         title.setMaxLines(3);
         title.setEllipsize(null);
         prayerCard.addView(title);
 
-        TextView subtitle = text("תזכורות אישיות עם מנטרה, קול ומסך נעים", 20, TEAL, Typeface.BOLD);
+        TextView subtitle = text("רגע קטן ביום שפותח את הלב", 20, TEAL, Typeface.BOLD);
         prayerCard.addView(subtitle);
 
-        TextView body = text("בחר כמה תזכורות שתרצה, שעה לכל תזכורת, והודעה אישית לכל רגע ביום.", 17, MUTED, Typeface.NORMAL);
+        TextView body = text("תזכורות אישיות עם מנטרה, קול, מוזיקה עדינה ומסך שמרגיש כמו עצירה טובה.", 16, MUTED, Typeface.NORMAL);
         body.setPadding(0, dp(8), 0, 0);
         prayerCard.addView(body);
 
         prayerCard.addView(metricRow());
 
         LinearLayout statusCard = gradientCard(
-                new int[]{Color.rgb(19, 44, 47), Color.rgb(0, 105, 92)},
+                new int[]{Color.rgb(12, 37, 43), Color.rgb(0, 105, 92), Color.rgb(15, 150, 126)},
                 Color.rgb(168, 218, 210),
                 22
         );
@@ -125,7 +133,7 @@ public final class MainActivity extends Activity {
         testButton.setOnClickListener(v -> openTestReminder());
         statusCard.addView(testButton);
 
-        LinearLayout remindersCard = card(Color.WHITE, Color.rgb(221, 231, 235), 20);
+        LinearLayout remindersCard = card(Color.rgb(255, 255, 255), Color.rgb(219, 231, 234), 20);
         remindersCard.setGravity(Gravity.RIGHT);
         root.addView(remindersCard);
 
@@ -164,7 +172,7 @@ public final class MainActivity extends Activity {
         remindersCard.addView(alarmButton);
 
         LinearLayout soundCard = gradientCard(
-                new int[]{Color.WHITE, Color.rgb(250, 253, 252)},
+                new int[]{Color.WHITE, Color.rgb(247, 253, 251), Color.rgb(255, 250, 238)},
                 Color.rgb(221, 231, 235),
                 20
         );
@@ -175,7 +183,7 @@ public final class MainActivity extends Activity {
         soundTitle.setGravity(Gravity.RIGHT);
         soundCard.addView(soundTitle);
 
-        TextView soundText = text("בחר מה יישמע כשהתזכורת קופצת: פעמון, מוזיקה רגועה, קול שמקריא את ההודעה, או מנטרה עם רקע שקט.", 16, MUTED, Typeface.NORMAL);
+        TextView soundText = text("בחר את האווירה של התזכורת: פעמון, מוזיקה, צלצולים, קול מוקלט בעברית או מנטרה עם רקע שקט.", 16, MUTED, Typeface.NORMAL);
         soundText.setGravity(Gravity.RIGHT);
         soundCard.addView(soundText);
 
@@ -203,16 +211,6 @@ public final class MainActivity extends Activity {
             if (previewPlayer != null) previewPlayer.stop();
         });
         soundCard.addView(stopPreviewButton);
-
-        Button voiceSettingsButton = secondaryButton("הגדרות קול בטלפון");
-        voiceSettingsButton.setOnClickListener(v -> {
-            try {
-                startActivity(new Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA));
-            } catch (RuntimeException ignored) {
-                startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));
-            }
-        });
-        soundCard.addView(voiceSettingsButton);
 
         return scrollView;
     }
@@ -296,7 +294,8 @@ public final class MainActivity extends Activity {
         row.setOrientation(LinearLayout.VERTICAL);
         row.setGravity(Gravity.RIGHT);
         row.setPadding(dp(14), dp(16), dp(14), dp(14));
-        row.setBackground(cardBackground(Color.rgb(251, 254, 253), Color.rgb(222, 233, 236), 18));
+        row.setBackground(cardBackground(Color.rgb(251, 254, 253), Color.rgb(217, 231, 234), 18));
+        row.setElevation(dp(1));
         LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -363,6 +362,7 @@ public final class MainActivity extends Activity {
         messageEdit.setMinLines(2);
         messageEdit.setSingleLine(false);
         messageEdit.setPadding(dp(10), dp(8), dp(10), dp(8));
+        messageEdit.setBackground(cardBackground(Color.WHITE, Color.rgb(225, 234, 237), 14));
         LinearLayout.LayoutParams messageParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -424,6 +424,7 @@ public final class MainActivity extends Activity {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(18), dp(18), dp(18), dp(18));
         card.setBackground(cardBackground(color, strokeColor, radiusDp));
+        card.setElevation(dp(2));
 
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -519,6 +520,7 @@ public final class MainActivity extends Activity {
     private Button styledButton(String label, int backgroundColor, int textColor, int textSize) {
         Button button = new Button(this);
         button.setText(label);
+        button.setAllCaps(false);
         button.setTextSize(textSize);
         button.setTextColor(textColor);
         button.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -532,6 +534,15 @@ public final class MainActivity extends Activity {
         params.setMargins(0, dp(12), 0, 0);
         button.setLayoutParams(params);
         return button;
+    }
+
+    private void styleSystemBars() {
+        Window window = getWindow();
+        window.setStatusBarColor(Color.rgb(226, 247, 243));
+        window.setNavigationBarColor(Color.rgb(246, 241, 255));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
     }
 
     private void adjustTime(ReminderSlot slot, boolean enabled, Button timeButton, int deltaMinutes) {
@@ -615,5 +626,85 @@ public final class MainActivity extends Activity {
 
     private int dp(int value) {
         return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private static final class AmbientHeartView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path heart = new Path();
+        private final RectF oval = new RectF();
+
+        AmbientHeartView(android.content.Context context) {
+            super(context);
+        }
+
+        @Override
+        protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            postInvalidateOnAnimation();
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float w = getWidth();
+            float h = getHeight();
+            float cx = w / 2f;
+            float cy = h * 0.52f;
+            float pulse = 1f + 0.035f * (float) Math.sin(System.currentTimeMillis() / 620.0);
+
+            paint.setStyle(Paint.Style.FILL);
+            drawCircle(canvas, cx, cy, h * 0.52f * pulse, Color.argb(44, 0, 137, 123));
+            drawCircle(canvas, cx - w * 0.24f, cy - h * 0.12f, h * 0.23f, Color.argb(34, 216, 27, 96));
+            drawCircle(canvas, cx + w * 0.26f, cy + h * 0.08f, h * 0.20f, Color.argb(38, 191, 138, 0));
+
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dpLocal(1.5f));
+            paint.setColor(Color.argb(90, 255, 255, 255));
+            for (int i = 0; i < 3; i++) {
+                float r = h * (0.27f + i * 0.095f) * pulse;
+                oval.set(cx - r, cy - r, cx + r, cy + r);
+                canvas.drawOval(oval, paint);
+            }
+
+            canvas.save();
+            canvas.translate(cx, cy - h * 0.02f);
+            canvas.scale(pulse, pulse);
+            buildHeartPath(h * 0.34f);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(Color.rgb(216, 27, 96));
+            canvas.drawPath(heart, paint);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dpLocal(2));
+            paint.setColor(Color.argb(190, 255, 255, 255));
+            canvas.drawPath(heart, paint);
+            canvas.restore();
+
+            paint.setStyle(Paint.Style.FILL);
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTypeface(Typeface.DEFAULT_BOLD);
+            paint.setTextSize(dpLocal(15));
+            paint.setColor(Color.rgb(0, 105, 92));
+            canvas.drawText("לנשום. לברך. להיזכר בטוב.", cx, h - dpLocal(10), paint);
+
+            postInvalidateOnAnimation();
+        }
+
+        private void drawCircle(Canvas canvas, float cx, float cy, float radius, int color) {
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(color);
+            canvas.drawCircle(cx, cy, radius, paint);
+        }
+
+        private void buildHeartPath(float size) {
+            heart.reset();
+            heart.moveTo(0, size * 0.42f);
+            heart.cubicTo(-size * 1.18f, -size * 0.18f, -size * 0.68f, -size * 1.08f, 0, -size * 0.55f);
+            heart.cubicTo(size * 0.68f, -size * 1.08f, size * 1.18f, -size * 0.18f, 0, size * 0.42f);
+            heart.close();
+        }
+
+        private float dpLocal(float value) {
+            return value * getResources().getDisplayMetrics().density;
+        }
     }
 }
