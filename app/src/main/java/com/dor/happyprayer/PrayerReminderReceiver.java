@@ -49,7 +49,7 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
         } else {
             builder = new Notification.Builder(context);
         }
-        builder.setSmallIcon(android.R.drawable.ic_dialog_info)
+        builder.setSmallIcon(R.drawable.app_icon)
                 .setContentTitle("שכולם יהיו מאושרים ושמחים")
                 .setContentText(message)
                 .setStyle(new Notification.BigTextStyle().bigText(message))

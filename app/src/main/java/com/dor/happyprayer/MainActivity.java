@@ -43,6 +43,7 @@ public final class MainActivity extends Activity {
     private static final int ROSE = Color.rgb(216, 27, 96);
     private static final int GOLD = Color.rgb(191, 138, 0);
     private ReminderSoundPlayer previewPlayer;
+    private boolean contentReady;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,8 +51,15 @@ public final class MainActivity extends Activity {
         styleSystemBars();
 
         setContentView(buildContent());
+        contentReady = true;
         requestNotificationPermissionIfNeeded();
         ReminderScheduler.scheduleAll(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (contentReady) refreshContent();
     }
 
     @Override
@@ -133,6 +141,10 @@ public final class MainActivity extends Activity {
         testButton.setOnClickListener(v -> openTestReminder());
         statusCard.addView(testButton);
 
+        Button realTestButton = lightButton("בדיקת התראה אמיתית בעוד דקה");
+        realTestButton.setOnClickListener(v -> scheduleOneMinuteTest());
+        statusCard.addView(realTestButton);
+
         LinearLayout remindersCard = card(Color.rgb(255, 255, 255), Color.rgb(219, 231, 234), 20);
         remindersCard.setGravity(Gravity.RIGHT);
         root.addView(remindersCard);
@@ -183,7 +195,7 @@ public final class MainActivity extends Activity {
         soundTitle.setGravity(Gravity.RIGHT);
         soundCard.addView(soundTitle);
 
-        TextView soundText = text("בחר את האווירה של התזכורת: פעמון, מוזיקה, צלצולים, קול מוקלט בעברית או מנטרה עם רקע שקט.", 16, MUTED, Typeface.NORMAL);
+        TextView soundText = text("בחר את האווירה של התזכורת: פעמון, מוזיקה, צלצולים, קול ברכה מוקלט או מנטרה מוקלטת עם רקע שקט.", 16, MUTED, Typeface.NORMAL);
         soundText.setGravity(Gravity.RIGHT);
         soundCard.addView(soundText);
 
@@ -363,6 +375,11 @@ public final class MainActivity extends Activity {
         messageEdit.setSingleLine(false);
         messageEdit.setPadding(dp(10), dp(8), dp(10), dp(8));
         messageEdit.setBackground(cardBackground(Color.WHITE, Color.rgb(225, 234, 237), 14));
+        messageEdit.setOnFocusChangeListener((view, hasFocus) -> {
+            if (!hasFocus) {
+                ReminderScheduler.saveMessage(this, slot, messageEdit.getText().toString());
+            }
+        });
         LinearLayout.LayoutParams messageParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -480,6 +497,10 @@ public final class MainActivity extends Activity {
         return styledButton(label, Color.rgb(232, 248, 246), Color.rgb(0, 105, 92), 16);
     }
 
+    private Button lightButton(String label) {
+        return styledButton(label, Color.rgb(237, 251, 247), Color.rgb(0, 105, 92), 16);
+    }
+
     private Button compactButton(String label) {
         Button button = styledButton(label, Color.rgb(245, 247, 248), Color.rgb(24, 28, 32), 14);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -581,6 +602,16 @@ public final class MainActivity extends Activity {
         intent.putExtra("slot_id", slotId);
         intent.putExtra("is_test", true);
         startActivity(intent);
+    }
+
+    private void scheduleOneMinuteTest() {
+        List<ReminderSlot> slots = ReminderScheduler.getSlots(this);
+        if (slots.isEmpty()) {
+            Toast.makeText(this, "אין תזכורות לבדיקה", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        ReminderScheduler.scheduleInMinutes(this, slots.get(0).id, 1);
+        Toast.makeText(this, "נקבעה בדיקת התראה בעוד דקה", Toast.LENGTH_LONG).show();
     }
 
     private String nextReminderSummary() {
