@@ -16,6 +16,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
@@ -327,6 +328,42 @@ public final class MainActivity extends Activity {
                 dp(58)
         ));
 
+        LinearLayout typedTimeRow = new LinearLayout(this);
+        typedTimeRow.setOrientation(LinearLayout.HORIZONTAL);
+        typedTimeRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams typedTimeParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        typedTimeParams.setMargins(0, dp(8), 0, 0);
+        row.addView(typedTimeRow, typedTimeParams);
+
+        EditText typedTimeEdit = new EditText(this);
+        typedTimeEdit.setHint("הקלד שעה: 9, 930, 09:30");
+        typedTimeEdit.setText(timeText(ReminderScheduler.getHour(this, slot), ReminderScheduler.getMinute(this, slot)));
+        typedTimeEdit.setTextSize(16);
+        typedTimeEdit.setSingleLine(true);
+        typedTimeEdit.setGravity(Gravity.CENTER);
+        typedTimeEdit.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
+        typedTimeEdit.setTextDirection(View.TEXT_DIRECTION_LTR);
+        typedTimeEdit.setBackground(cardBackground(Color.WHITE, Color.rgb(225, 234, 237), 14));
+        typedTimeRow.addView(typedTimeEdit, new LinearLayout.LayoutParams(0, dp(52), 1));
+
+        Button typedTimeButton = compactButton("קבע");
+        LinearLayout.LayoutParams typedButtonParams = new LinearLayout.LayoutParams(dp(76), dp(52));
+        typedButtonParams.setMargins(dp(8), 0, 0, 0);
+        typedTimeRow.addView(typedTimeButton, typedButtonParams);
+
+        LinearLayout quickTimes = new LinearLayout(this);
+        quickTimes.setOrientation(LinearLayout.HORIZONTAL);
+        quickTimes.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams quickParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        quickParams.setMargins(0, dp(8), 0, 0);
+        row.addView(quickTimes, quickParams);
+
         LinearLayout timeControls = new LinearLayout(this);
         timeControls.setOrientation(LinearLayout.HORIZONTAL);
         timeControls.setGravity(Gravity.CENTER);
@@ -364,6 +401,12 @@ public final class MainActivity extends Activity {
         Switch toggle = new Switch(this);
         toggle.setChecked(ReminderScheduler.isEnabled(this, slot));
         controls.addView(toggle);
+
+        quickTimes.addView(quickTimeButton(slot, toggle, timeButton, typedTimeEdit, "בוקר", 9, 0), new LinearLayout.LayoutParams(0, dp(46), 1));
+        quickTimes.addView(quickTimeButton(slot, toggle, timeButton, typedTimeEdit, "צהריים", 14, 0), new LinearLayout.LayoutParams(0, dp(46), 1));
+        quickTimes.addView(quickTimeButton(slot, toggle, timeButton, typedTimeEdit, "ערב", 20, 0), new LinearLayout.LayoutParams(0, dp(46), 1));
+
+        typedTimeButton.setOnClickListener(v -> applyTypedTime(slot, toggle.isChecked(), typedTimeEdit, timeButton));
 
         EditText messageEdit = new EditText(this);
         messageEdit.setText(ReminderScheduler.getMessage(this, slot));
@@ -411,10 +454,10 @@ public final class MainActivity extends Activity {
             }, currentHour, currentMinute, true).show();
         });
 
-        hourPlus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, 60));
-        hourMinus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, -60));
-        minutePlus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, 5));
-        minuteMinus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, -5));
+        hourPlus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, 60));
+        hourMinus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, -60));
+        minutePlus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, 5));
+        minuteMinus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, -5));
 
         deleteButton.setOnClickListener(v -> {
             new AlertDialog.Builder(this)
@@ -566,16 +609,38 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private void adjustTime(ReminderSlot slot, boolean enabled, Button timeButton, int deltaMinutes) {
+    private Button quickTimeButton(ReminderSlot slot, Switch toggle, Button timeButton, EditText typedTimeEdit, String label, int hour, int minute) {
+        Button button = compactButton(label);
+        button.setOnClickListener(v -> applyTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, hour, minute));
+        return button;
+    }
+
+    private void applyTypedTime(ReminderSlot slot, boolean enabled, EditText typedTimeEdit, Button timeButton) {
+        int[] hm = parseTypedTime(typedTimeEdit.getText().toString());
+        if (hm == null) {
+            Toast.makeText(this, "אפשר לכתוב למשל 9, 930 או 09:30", Toast.LENGTH_LONG).show();
+            return;
+        }
+        applyTime(slot, enabled, timeButton, typedTimeEdit, hm[0], hm[1]);
+    }
+
+    private void applyTime(ReminderSlot slot, boolean enabled, Button timeButton, EditText typedTimeEdit, int hour, int minute) {
+        String formatted = timeText(hour, minute);
+        timeButton.setText(formatted);
+        typedTimeEdit.setText(formatted);
+        ReminderScheduler.save(this, slot, enabled, hour, minute);
+        ReminderScheduler.scheduleAll(this);
+        Toast.makeText(this, "השעה נקבעה ל-" + formatted, Toast.LENGTH_SHORT).show();
+    }
+
+    private void adjustTime(ReminderSlot slot, boolean enabled, Button timeButton, EditText typedTimeEdit, int deltaMinutes) {
         int hour = ReminderScheduler.getHour(this, slot);
         int minute = ReminderScheduler.getMinute(this, slot);
         int total = (hour * 60 + minute + deltaMinutes) % (24 * 60);
         if (total < 0) total += 24 * 60;
         int newHour = total / 60;
         int newMinute = total % 60;
-        timeButton.setText(timeText(newHour, newMinute));
-        ReminderScheduler.save(this, slot, enabled, newHour, newMinute);
-        ReminderScheduler.scheduleAll(this);
+        applyTime(slot, enabled, timeButton, typedTimeEdit, newHour, newMinute);
     }
 
     private void requestNotificationPermissionIfNeeded() {
@@ -653,6 +718,40 @@ public final class MainActivity extends Activity {
     private int[] parseTime(String value) {
         String[] parts = value.split(":");
         return new int[]{Integer.parseInt(parts[0]), Integer.parseInt(parts[1])};
+    }
+
+    private int[] parseTypedTime(String rawValue) {
+        if (rawValue == null) return null;
+        String value = rawValue.trim()
+                .replace(".", ":")
+                .replace(" ", "");
+        if (value.isEmpty()) return null;
+
+        int hour;
+        int minute;
+        try {
+            if (value.contains(":")) {
+                String[] parts = value.split(":");
+                if (parts.length != 2 || parts[0].isEmpty() || parts[1].isEmpty()) return null;
+                hour = Integer.parseInt(parts[0]);
+                minute = Integer.parseInt(parts[1]);
+            } else {
+                if (!value.matches("\\d{1,4}")) return null;
+                int number = Integer.parseInt(value);
+                if (value.length() <= 2) {
+                    hour = number;
+                    minute = 0;
+                } else {
+                    hour = number / 100;
+                    minute = number % 100;
+                }
+            }
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+
+        if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+        return new int[]{hour, minute};
     }
 
     private int dp(int value) {
