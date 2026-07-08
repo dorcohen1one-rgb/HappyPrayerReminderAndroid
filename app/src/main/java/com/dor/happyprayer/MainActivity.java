@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.AlertDialog;
-import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Canvas;
@@ -320,68 +319,33 @@ public final class MainActivity extends Activity {
         label.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         row.addView(label);
 
-        Button timeButton = secondaryButton(timeText(ReminderScheduler.getHour(this, slot), ReminderScheduler.getMinute(this, slot)));
+        TextView statusChip = chip(ReminderScheduler.isEnabled(this, slot) ? "פעיל" : "כבוי",
+                ReminderScheduler.isEnabled(this, slot) ? Color.rgb(232, 248, 246) : Color.rgb(255, 239, 246),
+                ReminderScheduler.isEnabled(this, slot) ? TEAL : ROSE);
+        LinearLayout.LayoutParams statusParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                dp(34)
+        );
+        statusParams.setMargins(0, dp(8), 0, 0);
+        row.addView(statusChip, statusParams);
+
+        Button timeButton = new Button(this);
         timeButton.setText(timeText(ReminderScheduler.getHour(this, slot), ReminderScheduler.getMinute(this, slot)));
-        timeButton.setTextSize(27);
-        row.addView(timeButton, new LinearLayout.LayoutParams(
+        timeButton.setAllCaps(false);
+        timeButton.setTextSize(30);
+        timeButton.setTypeface(Typeface.DEFAULT_BOLD);
+        timeButton.setTextColor(INK);
+        GradientDrawable timeBackground = new GradientDrawable();
+        timeBackground.setColor(Color.rgb(255, 250, 238));
+        timeBackground.setCornerRadius(dp(18));
+        timeBackground.setStroke(dp(1), Color.rgb(232, 220, 188));
+        timeButton.setBackground(timeBackground);
+        LinearLayout.LayoutParams timeButtonParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                dp(58)
-        ));
-
-        LinearLayout typedTimeRow = new LinearLayout(this);
-        typedTimeRow.setOrientation(LinearLayout.HORIZONTAL);
-        typedTimeRow.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout.LayoutParams typedTimeParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
+                dp(70)
         );
-        typedTimeParams.setMargins(0, dp(8), 0, 0);
-        row.addView(typedTimeRow, typedTimeParams);
-
-        EditText typedTimeEdit = new EditText(this);
-        typedTimeEdit.setHint("הקלד שעה: 9, 930, 09:30");
-        typedTimeEdit.setText(timeText(ReminderScheduler.getHour(this, slot), ReminderScheduler.getMinute(this, slot)));
-        typedTimeEdit.setTextSize(16);
-        typedTimeEdit.setSingleLine(true);
-        typedTimeEdit.setGravity(Gravity.CENTER);
-        typedTimeEdit.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
-        typedTimeEdit.setTextDirection(View.TEXT_DIRECTION_LTR);
-        typedTimeEdit.setBackground(cardBackground(Color.WHITE, Color.rgb(225, 234, 237), 14));
-        typedTimeRow.addView(typedTimeEdit, new LinearLayout.LayoutParams(0, dp(52), 1));
-
-        Button typedTimeButton = compactButton("קבע");
-        LinearLayout.LayoutParams typedButtonParams = new LinearLayout.LayoutParams(dp(76), dp(52));
-        typedButtonParams.setMargins(dp(8), 0, 0, 0);
-        typedTimeRow.addView(typedTimeButton, typedButtonParams);
-
-        LinearLayout quickTimes = new LinearLayout(this);
-        quickTimes.setOrientation(LinearLayout.HORIZONTAL);
-        quickTimes.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams quickParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        quickParams.setMargins(0, dp(8), 0, 0);
-        row.addView(quickTimes, quickParams);
-
-        LinearLayout timeControls = new LinearLayout(this);
-        timeControls.setOrientation(LinearLayout.HORIZONTAL);
-        timeControls.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams timeControlsParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        timeControlsParams.setMargins(0, dp(8), 0, 0);
-        row.addView(timeControls, timeControlsParams);
-
-        Button hourPlus = compactButton("+ שעה");
-        Button hourMinus = compactButton("- שעה");
-        Button minutePlus = compactButton("+ 5 דק׳");
-        Button minuteMinus = compactButton("- 5 דק׳");
-        timeControls.addView(hourPlus, new LinearLayout.LayoutParams(0, dp(46), 1));
-        timeControls.addView(hourMinus, new LinearLayout.LayoutParams(0, dp(46), 1));
-        timeControls.addView(minutePlus, new LinearLayout.LayoutParams(0, dp(46), 1));
-        timeControls.addView(minuteMinus, new LinearLayout.LayoutParams(0, dp(46), 1));
+        timeButtonParams.setMargins(0, dp(14), 0, 0);
+        row.addView(timeButton, timeButtonParams);
 
         LinearLayout controls = new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
@@ -393,24 +357,13 @@ public final class MainActivity extends Activity {
         controlsParams.setMargins(0, dp(8), 0, 0);
         row.addView(controls, controlsParams);
 
-        Button deleteButton = secondaryButton("מחיקה");
-        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(dp(92), dp(52));
-        deleteParams.setMargins(dp(8), 0, dp(8), 0);
-        controls.addView(deleteButton, deleteParams);
-
         Switch toggle = new Switch(this);
         toggle.setChecked(ReminderScheduler.isEnabled(this, slot));
         controls.addView(toggle);
 
-        quickTimes.addView(quickTimeButton(slot, toggle, timeButton, typedTimeEdit, "בוקר", 9, 0), new LinearLayout.LayoutParams(0, dp(46), 1));
-        quickTimes.addView(quickTimeButton(slot, toggle, timeButton, typedTimeEdit, "צהריים", 14, 0), new LinearLayout.LayoutParams(0, dp(46), 1));
-        quickTimes.addView(quickTimeButton(slot, toggle, timeButton, typedTimeEdit, "ערב", 20, 0), new LinearLayout.LayoutParams(0, dp(46), 1));
-
-        typedTimeButton.setOnClickListener(v -> applyTypedTime(slot, toggle.isChecked(), typedTimeEdit, timeButton));
-
         EditText messageEdit = new EditText(this);
         messageEdit.setText(ReminderScheduler.getMessage(this, slot));
-        messageEdit.setTextSize(17);
+        messageEdit.setTextSize(16);
         messageEdit.setTextColor(INK);
         messageEdit.setGravity(Gravity.RIGHT | Gravity.TOP);
         messageEdit.setTextDirection(View.TEXT_DIRECTION_RTL);
@@ -427,38 +380,14 @@ public final class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         );
-        messageParams.setMargins(0, dp(8), 0, 0);
+        messageParams.setMargins(0, dp(12), 0, 0);
         row.addView(messageEdit, messageParams);
 
-        Button saveMessageButton = primaryButton("שמירת ההודעה לשעה הזו");
-        saveMessageButton.setOnClickListener(v -> {
-            ReminderScheduler.saveMessage(this, slot, messageEdit.getText().toString());
-            Toast.makeText(this, "ההודעה נשמרה", Toast.LENGTH_SHORT).show();
-        });
-        row.addView(saveMessageButton);
+        Button editButton = primaryButton("עריכה מהירה");
+        editButton.setOnClickListener(v -> showReminderEditor(slot, timeButton, messageEdit, toggle));
+        row.addView(editButton);
 
-        CompoundButton.OnCheckedChangeListener saveToggle = (buttonView, isChecked) -> {
-            int[] hm = parseTime(timeButton.getText().toString());
-            ReminderScheduler.save(this, slot, isChecked, hm[0], hm[1]);
-            ReminderScheduler.scheduleAll(this);
-        };
-        toggle.setOnCheckedChangeListener(saveToggle);
-
-        timeButton.setOnClickListener(v -> {
-            int currentHour = ReminderScheduler.getHour(this, slot);
-            int currentMinute = ReminderScheduler.getMinute(this, slot);
-            new TimePickerDialog(this, (view, hourOfDay, minute) -> {
-                timeButton.setText(timeText(hourOfDay, minute));
-                ReminderScheduler.save(this, slot, toggle.isChecked(), hourOfDay, minute);
-                ReminderScheduler.scheduleAll(this);
-            }, currentHour, currentMinute, true).show();
-        });
-
-        hourPlus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, 60));
-        hourMinus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, -60));
-        minutePlus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, 5));
-        minuteMinus.setOnClickListener(v -> adjustTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, -5));
-
+        Button deleteButton = secondaryButton("מחיקה");
         deleteButton.setOnClickListener(v -> {
             new AlertDialog.Builder(this)
                     .setTitle("למחוק את התזכורת?")
@@ -471,6 +400,17 @@ public final class MainActivity extends Activity {
                     .setNegativeButton("ביטול", null)
                     .show();
         });
+        row.addView(deleteButton);
+
+        CompoundButton.OnCheckedChangeListener saveToggle = (buttonView, isChecked) -> {
+            int[] hm = parseTime(timeButton.getText().toString());
+            ReminderScheduler.save(this, slot, isChecked, hm[0], hm[1]);
+            ReminderScheduler.scheduleAll(this);
+            statusChip.setText(isChecked ? "פעיל" : "כבוי");
+        };
+        toggle.setOnCheckedChangeListener(saveToggle);
+
+        timeButton.setOnClickListener(v -> showReminderEditor(slot, timeButton, messageEdit, toggle));
 
         return row;
     }
@@ -609,38 +549,97 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private Button quickTimeButton(ReminderSlot slot, Switch toggle, Button timeButton, EditText typedTimeEdit, String label, int hour, int minute) {
-        Button button = compactButton(label);
-        button.setOnClickListener(v -> applyTime(slot, toggle.isChecked(), timeButton, typedTimeEdit, hour, minute));
-        return button;
-    }
+    private void showReminderEditor(ReminderSlot slot, Button timeButton, EditText messageEdit, Switch toggle) {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(12), dp(10), dp(12), dp(10));
 
-    private void applyTypedTime(ReminderSlot slot, boolean enabled, EditText typedTimeEdit, Button timeButton) {
-        int[] hm = parseTypedTime(typedTimeEdit.getText().toString());
-        if (hm == null) {
-            Toast.makeText(this, "אפשר לכתוב למשל 9, 930 או 09:30", Toast.LENGTH_LONG).show();
-            return;
-        }
-        applyTime(slot, enabled, timeButton, typedTimeEdit, hm[0], hm[1]);
-    }
+        TextView editorTitle = text("עריכה מהירה", 18, INK, Typeface.BOLD);
+        editorTitle.setGravity(Gravity.RIGHT);
+        content.addView(editorTitle);
 
-    private void applyTime(ReminderSlot slot, boolean enabled, Button timeButton, EditText typedTimeEdit, int hour, int minute) {
-        String formatted = timeText(hour, minute);
-        timeButton.setText(formatted);
-        typedTimeEdit.setText(formatted);
-        ReminderScheduler.save(this, slot, enabled, hour, minute);
-        ReminderScheduler.scheduleAll(this);
-        Toast.makeText(this, "השעה נקבעה ל-" + formatted, Toast.LENGTH_SHORT).show();
-    }
+        EditText timeInput = new EditText(this);
+        timeInput.setHint("שעה: 9, 930, 09:30");
+        timeInput.setText(timeButton.getText().toString());
+        timeInput.setTextSize(16);
+        timeInput.setSingleLine(true);
+        timeInput.setGravity(Gravity.CENTER);
+        timeInput.setInputType(InputType.TYPE_CLASS_DATETIME | InputType.TYPE_DATETIME_VARIATION_TIME);
+        timeInput.setTextDirection(View.TEXT_DIRECTION_LTR);
+        timeInput.setBackground(cardBackground(Color.WHITE, Color.rgb(225, 234, 237), 14));
+        LinearLayout.LayoutParams timeInputParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(52)
+        );
+        timeInputParams.setMargins(0, dp(12), 0, 0);
+        content.addView(timeInput, timeInputParams);
 
-    private void adjustTime(ReminderSlot slot, boolean enabled, Button timeButton, EditText typedTimeEdit, int deltaMinutes) {
-        int hour = ReminderScheduler.getHour(this, slot);
-        int minute = ReminderScheduler.getMinute(this, slot);
-        int total = (hour * 60 + minute + deltaMinutes) % (24 * 60);
-        if (total < 0) total += 24 * 60;
-        int newHour = total / 60;
-        int newMinute = total % 60;
-        applyTime(slot, enabled, timeButton, typedTimeEdit, newHour, newMinute);
+        LinearLayout quickRow = new LinearLayout(this);
+        quickRow.setOrientation(LinearLayout.HORIZONTAL);
+        quickRow.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams quickRowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        quickRowParams.setMargins(0, dp(10), 0, 0);
+        content.addView(quickRow, quickRowParams);
+
+        Button morning = compactButton("בוקר");
+        morning.setOnClickListener(v -> timeInput.setText("09:00"));
+        Button noon = compactButton("צהריים");
+        noon.setOnClickListener(v -> timeInput.setText("14:00"));
+        Button evening = compactButton("ערב");
+        evening.setOnClickListener(v -> timeInput.setText("20:00"));
+        quickRow.addView(morning, new LinearLayout.LayoutParams(0, dp(44), 1));
+        quickRow.addView(noon, new LinearLayout.LayoutParams(0, dp(44), 1));
+        quickRow.addView(evening, new LinearLayout.LayoutParams(0, dp(44), 1));
+
+        EditText messageInput = new EditText(this);
+        messageInput.setText(messageEdit.getText().toString());
+        messageInput.setHint("הודעה אישית");
+        messageInput.setTextSize(16);
+        messageInput.setTextColor(INK);
+        messageInput.setGravity(Gravity.RIGHT | Gravity.TOP);
+        messageInput.setTextDirection(View.TEXT_DIRECTION_RTL);
+        messageInput.setMinLines(3);
+        messageInput.setSingleLine(false);
+        messageInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+        messageInput.setBackground(cardBackground(Color.WHITE, Color.rgb(225, 234, 237), 14));
+        LinearLayout.LayoutParams messageParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        messageParams.setMargins(0, dp(12), 0, 0);
+        content.addView(messageInput, messageParams);
+
+        CheckBox enabledCheck = new CheckBox(this);
+        enabledCheck.setText("פעילה");
+        enabledCheck.setChecked(toggle.isChecked());
+        enabledCheck.setTextDirection(View.TEXT_DIRECTION_RTL);
+        content.addView(enabledCheck);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setView(content)
+                .setPositiveButton("שמירה", null)
+                .setNegativeButton("ביטול", null)
+                .show();
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            int[] hm = parseTypedTime(timeInput.getText().toString());
+            if (hm == null) {
+                Toast.makeText(this, "הקלד שעה כמו 9, 930 או 09:30", Toast.LENGTH_LONG).show();
+                return;
+            }
+            String formatted = timeText(hm[0], hm[1]);
+            timeButton.setText(formatted);
+            messageEdit.setText(messageInput.getText().toString());
+            ReminderScheduler.save(this, slot, enabledCheck.isChecked(), hm[0], hm[1]);
+            ReminderScheduler.saveMessage(this, slot, messageInput.getText().toString());
+            ReminderScheduler.scheduleAll(this);
+            refreshContent();
+            Toast.makeText(this, "נשמר", Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
     }
 
     private void requestNotificationPermissionIfNeeded() {

@@ -21,12 +21,12 @@ final class ReminderSoundPlayer {
         stop();
         if (soundMode == ReminderScheduler.SOUND_MANTRA) {
             playLoopingSound(context, R.raw.calm_pad, 0.36f);
-            playVoice(context, R.raw.mantra_voice, 0.96f);
+            playVoice(context, R.raw.mantra_voice, 0.94f);
             return;
         }
         if (soundMode == ReminderScheduler.SOUND_VOICE) {
-            playLoopingSound(context, R.raw.calm_pad, 0.22f);
-            playVoice(context, R.raw.default_voice, 0.98f);
+            playLoopingSound(context, R.raw.calm_pad, 0.18f);
+            playVoice(context, R.raw.default_voice, 0.94f);
             return;
         }
 
