@@ -54,10 +54,10 @@ public final class ReminderPopupActivity extends Activity {
         FrameLayout screen = new FrameLayout(this);
         GradientDrawable background = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(5, 42, 48), Color.rgb(0, 105, 92), Color.rgb(255, 244, 218), Color.rgb(247, 238, 255)}
+                new int[]{Color.rgb(5, 40, 47), Color.rgb(0, 97, 88), Color.rgb(255, 243, 221), Color.rgb(247, 238, 255)}
         );
         screen.setBackground(background);
-        screen.setPadding(dp(16), dp(22), dp(16), dp(22));
+        screen.setPadding(dp(14), dp(18), dp(14), dp(18));
 
         HeartHaloView halo = new HeartHaloView(this);
         screen.addView(halo, new FrameLayout.LayoutParams(
@@ -68,22 +68,36 @@ public final class ReminderPopupActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER);
-        root.setPadding(dp(22), dp(26), dp(22), dp(24));
+        root.setPadding(dp(20), dp(22), dp(20), dp(22));
         GradientDrawable card = new GradientDrawable(
                 GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{Color.WHITE, Color.rgb(246, 253, 251), Color.rgb(255, 250, 239)}
+                new int[]{Color.WHITE, Color.rgb(245, 253, 251), Color.rgb(255, 251, 241)}
         );
-        card.setCornerRadius(dp(28));
-        card.setStroke(dp(2), Color.rgb(182, 224, 216));
+        card.setCornerRadius(dp(30));
+        card.setStroke(dp(2), Color.rgb(181, 225, 216));
         root.setBackground(card);
-        root.setElevation(dp(8));
+        root.setElevation(dp(10));
+
+        TextView whisper = new TextView(this);
+        whisper.setText("רגע לעצירה");
+        whisper.setTextSize(15);
+        whisper.setTextColor(Color.WHITE);
+        whisper.setTypeface(Typeface.DEFAULT_BOLD);
+        whisper.setGravity(Gravity.CENTER);
+        whisper.setPadding(dp(14), dp(7), dp(14), dp(7));
+        GradientDrawable whisperBackground = new GradientDrawable();
+        whisperBackground.setColor(Color.rgb(0, 137, 123));
+        whisperBackground.setCornerRadius(dp(20));
+        whisper.setBackground(whisperBackground);
+        root.addView(whisper);
 
         TextView smallTitle = new TextView(this);
-        smallTitle.setText(getIntent().getBooleanExtra("is_test", false) ? "בדיקת תזכורת" : "תזכורת טובה");
-        smallTitle.setTextSize(20);
+        smallTitle.setText(getIntent().getBooleanExtra("is_test", false) ? "בדיקת תזכורת" : "תזכורת חמה");
+        smallTitle.setTextSize(22);
         smallTitle.setTextColor(TEAL);
         smallTitle.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         smallTitle.setGravity(Gravity.CENTER);
+        smallTitle.setPadding(0, dp(10), 0, 0);
         root.addView(smallTitle);
 
         TextView sparkle = new TextView(this);
@@ -95,29 +109,46 @@ public final class ReminderPopupActivity extends Activity {
 
         TextView heart = new TextView(this);
         heart.setText("♥");
-        heart.setTextSize(74);
+        heart.setTextSize(78);
         heart.setTextColor(ROSE);
         heart.setGravity(Gravity.CENTER);
         root.addView(heart);
+
+        LinearLayout messagePanel = new LinearLayout(this);
+        messagePanel.setOrientation(LinearLayout.VERTICAL);
+        messagePanel.setPadding(dp(18), dp(16), dp(18), dp(16));
+        GradientDrawable messageBackground = new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.rgb(255, 248, 252), Color.rgb(250, 251, 255)}
+        );
+        messageBackground.setCornerRadius(dp(22));
+        messageBackground.setStroke(dp(1), Color.rgb(236, 229, 240));
+        messagePanel.setBackground(messageBackground);
+        LinearLayout.LayoutParams messagePanelParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        messagePanelParams.setMargins(0, dp(12), 0, 0);
+        root.addView(messagePanel, messagePanelParams);
 
         TextView message = new TextView(this);
         int slotId = getIntent().getIntExtra("slot_id", 0);
         String reminderMessage = ReminderScheduler.getMessage(this, slotId);
         message.setText(reminderMessage);
-        message.setTextSize(33);
+        message.setTextSize(31);
         message.setTextColor(INK);
         message.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         message.setGravity(Gravity.CENTER);
         message.setTextDirection(View.TEXT_DIRECTION_RTL);
-        message.setLineSpacing(dp(7), 1.0f);
-        root.addView(message, new LinearLayout.LayoutParams(
+        message.setLineSpacing(dp(8), 1.05f);
+        messagePanel.addView(message, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
         ));
 
         TextView footer = new TextView(this);
-        footer.setText("רגע קטן של אור לפני שממשיכים.");
-        footer.setTextSize(18);
+        footer.setText("נושמים, מרפים, ממשיכים.");
+        footer.setTextSize(17);
         footer.setTextColor(Color.rgb(91, 104, 114));
         footer.setGravity(Gravity.CENTER);
         footer.setTextDirection(View.TEXT_DIRECTION_RTL);
@@ -129,9 +160,9 @@ public final class ReminderPopupActivity extends Activity {
         root.addView(footer, footerParams);
 
         Button closeButton = new Button(this);
-        closeButton.setText("סגור ועצור צליל");
+        closeButton.setText("סגור");
         closeButton.setAllCaps(false);
-        closeButton.setTextSize(20);
+        closeButton.setTextSize(19);
         closeButton.setTextColor(Color.WHITE);
         closeButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         GradientDrawable closeBackground = new GradientDrawable(
@@ -149,9 +180,9 @@ public final class ReminderPopupActivity extends Activity {
         root.addView(closeButton, buttonParams);
 
         Button snoozeButton = new Button(this);
-        snoozeButton.setText("עוד 10 דקות");
+        snoozeButton.setText("נודניק 10 דק'");
         snoozeButton.setAllCaps(false);
-        snoozeButton.setTextSize(18);
+        snoozeButton.setTextSize(17);
         snoozeButton.setTextColor(TEAL);
         snoozeButton.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         GradientDrawable snoozeBackground = new GradientDrawable();
@@ -179,11 +210,12 @@ public final class ReminderPopupActivity extends Activity {
     private void playSound() {
         int slotId = getIntent().getIntExtra("slot_id", 0);
         soundPlayer = new ReminderSoundPlayer();
-        int seconds = ReminderScheduler.getPlaybackSeconds(this);
+        String message = ReminderScheduler.getMessage(this, slotId);
+        int seconds = ReminderScheduler.getPlaybackSeconds(this, message);
         soundPlayer.play(
                 this,
                 ReminderScheduler.getSoundMode(this),
-                ReminderScheduler.getMessage(this, slotId),
+                message,
                 seconds
         );
         getWindow().getDecorView().postDelayed(this::stopSound, seconds * 1000L);

@@ -195,7 +195,7 @@ public final class MainActivity extends Activity {
         soundTitle.setGravity(Gravity.RIGHT);
         soundCard.addView(soundTitle);
 
-        TextView soundText = text("בחר את האווירה של התזכורת: פעמון, מוזיקה, צלצולים, קול ברכה מוקלט או מנטרה מוקלטת עם רקע שקט.", 16, MUTED, Typeface.NORMAL);
+        TextView soundText = text("בחר את האופי של הרגע: קריסטל, רקע רגוע, צלצולי אור, קול חם או מנטרה חיה.", 16, MUTED, Typeface.NORMAL);
         soundText.setGravity(Gravity.RIGHT);
         soundCard.addView(soundText);
 
@@ -205,7 +205,7 @@ public final class MainActivity extends Activity {
         Button playButton = primaryButton("השמעת הצליל שבחרתי");
         playButton.setOnClickListener(v -> {
             if (previewPlayer == null) previewPlayer = new ReminderSoundPlayer();
-            int playbackSeconds = ReminderScheduler.getPlaybackSeconds(this);
+            int playbackSeconds = ReminderScheduler.getPlaybackSeconds(this, ReminderScheduler.getMessage(this));
             previewPlayer.play(
                     this,
                     ReminderScheduler.getSoundMode(this),

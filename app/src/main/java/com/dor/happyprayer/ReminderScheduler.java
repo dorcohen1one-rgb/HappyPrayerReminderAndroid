@@ -22,11 +22,11 @@ final class ReminderScheduler {
     static final int SOUND_VOICE = 3;
     static final int SOUND_MANTRA = 4;
     static final String[] SOUND_LABELS = {
-            "פעמון עדין",
-            "מוזיקה רגועה",
-            "צלצולים עדינים",
-            "קול ברכה מוקלט",
-            "מנטרה מוקלטת עם מוזיקה"
+            "פעמון קריסטל",
+            "רקע רגוע",
+            "צלצולי אור",
+            "קול חם",
+            "מנטרה חיה"
     };
     private static final int[][] DEFAULT_TIMES = {
             {9, 0},
@@ -255,10 +255,16 @@ final class ReminderScheduler {
     }
 
     static int getPlaybackSeconds(Context context) {
+        return getPlaybackSeconds(context, getMessage(context));
+    }
+
+    static int getPlaybackSeconds(Context context, String message) {
         int seconds = getSoundSeconds(context);
         int mode = getSoundMode(context);
         if (mode == SOUND_VOICE || mode == SOUND_MANTRA) {
-            return Math.max(seconds, 35);
+            String text = message == null ? DEFAULT_MESSAGE : message.trim();
+            int estimated = 18 + Math.max(0, text.length() / 4);
+            return Math.max(seconds, Math.max(35, estimated));
         }
         return seconds;
     }
