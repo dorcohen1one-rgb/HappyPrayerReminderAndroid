@@ -195,7 +195,7 @@ public final class MainActivity extends Activity {
         soundTitle.setGravity(Gravity.RIGHT);
         soundCard.addView(soundTitle);
 
-        TextView soundText = text("בחר את האופי של הרגע: קריסטל, רקע רגוע, צלצולי אור, קול חם או מנטרה חיה.", 16, MUTED, Typeface.NORMAL);
+        TextView soundText = text("בחר את האופי של הרגע: פעמון קריסטל, מיטת סאונד רגועה, צלצולי אור, קול נשמה או מנטרה שלווה.", 16, MUTED, Typeface.NORMAL);
         soundText.setGravity(Gravity.RIGHT);
         soundCard.addView(soundText);
 
