@@ -12,6 +12,7 @@ import android.content.pm.PackageManager;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 
 public final class PrayerReminderReceiver extends BroadcastReceiver {
     private static final String CHANNEL_ID_PREFIX = "happy_prayer_daily_v5_";
@@ -19,6 +20,13 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         int slotId = intent.getIntExtra("slot_id", 0);
+        if (ReminderScheduler.isAirplanePauseEnabled(context) && isAirplaneModeOn(context)) {
+            ReminderSlot pausedSlot = ReminderScheduler.getSlot(context, slotId);
+            if (pausedSlot != null && ReminderScheduler.isEnabled(context, pausedSlot)) {
+                ReminderScheduler.schedule(context, pausedSlot);
+            }
+            return;
+        }
         int soundMode = ReminderScheduler.getSoundMode(context);
         String channelId = channelId(soundMode, ReminderScheduler.isPopupEnabled(context));
         createChannel(context, soundMode, channelId);
@@ -136,5 +144,10 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
             soundResource = R.raw.mantra_voice;
         }
         return Uri.parse("android.resource://" + context.getPackageName() + "/" + soundResource);
+    }
+
+    private static boolean isAirplaneModeOn(Context context) {
+        return Settings.Global.getInt(
+                context.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
     }
 }

@@ -246,6 +246,14 @@ final class ReminderScheduler {
         prefs(context).edit().putBoolean("popup_enabled", enabled).apply();
     }
 
+    static boolean isAirplanePauseEnabled(Context context) {
+        return prefs(context).getBoolean("airplane_pause_enabled", true);
+    }
+
+    static void saveAirplanePauseEnabled(Context context, boolean enabled) {
+        prefs(context).edit().putBoolean("airplane_pause_enabled", enabled).apply();
+    }
+
     static int getSoundSeconds(Context context) {
         return prefs(context).getInt("sound_seconds", 20);
     }

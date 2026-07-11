@@ -194,6 +194,16 @@ public final class MainActivity extends Activity {
         popupCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> ReminderScheduler.savePopupEnabled(this, isChecked));
         remindersCard.addView(popupCheckBox);
 
+        CheckBox airplaneCheckBox = new CheckBox(this);
+        airplaneCheckBox.setText("שבת שקטה: לא להדליק מסך ולא להתריע במצב טיסה");
+        airplaneCheckBox.setTextSize(17);
+        airplaneCheckBox.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
+        airplaneCheckBox.setTextDirection(View.TEXT_DIRECTION_RTL);
+        airplaneCheckBox.setChecked(ReminderScheduler.isAirplanePauseEnabled(this));
+        airplaneCheckBox.setOnCheckedChangeListener((buttonView, isChecked) ->
+                ReminderScheduler.saveAirplanePauseEnabled(this, isChecked));
+        remindersCard.addView(airplaneCheckBox);
+
         Button permissionButton = secondaryButton("לאשר התראות בטלפון");
         permissionButton.setOnClickListener(v -> requestNotificationPermissionIfNeeded());
         remindersCard.addView(permissionButton);

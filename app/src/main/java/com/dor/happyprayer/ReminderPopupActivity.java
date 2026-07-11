@@ -13,6 +13,8 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.view.Window;
@@ -24,10 +26,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public final class ReminderPopupActivity extends Activity {
+    private static final long RELEASE_SCREEN_AFTER_MS = 18_000L;
+    private static final long AUTO_CLOSE_AFTER_MS = 45_000L;
     private static final int INK = Color.rgb(17, 24, 39);
     private static final int TEAL = Color.rgb(0, 137, 123);
     private static final int ROSE = Color.rgb(216, 27, 96);
     private ReminderSoundPlayer soundPlayer;
+    private final Handler safetyHandler = new Handler(Looper.getMainLooper());
+    private final Runnable releaseScreen = () ->
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    private final Runnable autoClose = () -> {
+        stopSound();
+        if (!isFinishing()) finish();
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,10 +63,16 @@ public final class ReminderPopupActivity extends Activity {
         content.setScaleY(.97f);
         content.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(650).start();
         playSound();
+        // Alarms also run in airplane mode. Never let an unattended reminder drain the battery:
+        // release the forced wake lock quickly, then close the activity unconditionally.
+        safetyHandler.postDelayed(releaseScreen, RELEASE_SCREEN_AFTER_MS);
+        safetyHandler.postDelayed(autoClose, AUTO_CLOSE_AFTER_MS);
     }
 
     @Override
     protected void onDestroy() {
+        safetyHandler.removeCallbacksAndMessages(null);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         stopSound();
         super.onDestroy();
     }
@@ -154,7 +171,7 @@ public final class ReminderPopupActivity extends Activity {
         ));
 
         TextView footer = new TextView(this);
-        footer.setText("נושמים, מרפים, ממשיכים.");
+        footer.setText("נושמים, מרפים, ממשיכים. המסך ייסגר אוטומטית.");
         footer.setTextSize(17);
         footer.setTextColor(Color.rgb(91, 104, 114));
         footer.setGravity(Gravity.CENTER);
