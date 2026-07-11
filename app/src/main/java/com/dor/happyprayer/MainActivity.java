@@ -35,6 +35,7 @@ import android.widget.Toast;
 
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
@@ -77,7 +78,7 @@ public final class MainActivity extends Activity {
 
     private View buildContent() {
         FrameLayout scene = new FrameLayout(this);
-        scene.setBackground(gradient(Color.rgb(7, 12, 32), Color.rgb(18, 16, 58), Color.rgb(6, 42, 51)));
+        scene.setBackground(daySky());
         scene.addView(new AuroraBackgroundView(this), new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
@@ -102,6 +103,11 @@ public final class MainActivity extends Activity {
         prayerCard.setGravity(Gravity.CENTER_HORIZONTAL);
         prayerCard.setPadding(dp(18), dp(20), dp(18), dp(22));
         root.addView(prayerCard);
+
+        TextView brand = chip(dayGreeting(), Color.argb(48, 255, 255, 255), Color.WHITE);
+        brand.setTextSize(14);
+        prayerCard.addView(brand, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(40)));
 
         AmbientHeartView ambientHeartView = new AmbientHeartView(this);
         prayerCard.addView(ambientHeartView, new LinearLayout.LayoutParams(
@@ -462,6 +468,28 @@ public final class MainActivity extends Activity {
 
     private GradientDrawable gradient(int... colors) {
         return new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, colors);
+    }
+
+    private GradientDrawable daySky() {
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (hour >= 5 && hour < 11) {
+            return gradient(Color.rgb(39, 28, 70), Color.rgb(123, 48, 94), Color.rgb(17, 96, 105));
+        }
+        if (hour >= 11 && hour < 17) {
+            return gradient(Color.rgb(5, 34, 62), Color.rgb(9, 86, 102), Color.rgb(33, 36, 91));
+        }
+        if (hour >= 17 && hour < 21) {
+            return gradient(Color.rgb(32, 19, 73), Color.rgb(107, 36, 99), Color.rgb(11, 61, 84));
+        }
+        return gradient(Color.rgb(4, 7, 24), Color.rgb(18, 12, 54), Color.rgb(5, 36, 48));
+    }
+
+    private String dayGreeting() {
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        if (hour < 11) return "✦  טקס הבוקר שלך";
+        if (hour < 17) return "✦  רגע של אור באמצע היום";
+        if (hour < 21) return "✦  טקס השקיעה שלך";
+        return "✦  מרחב הלילה השקט שלך";
     }
 
     private GradientDrawable cardBackground(int color, int strokeColor, int radiusDp) {

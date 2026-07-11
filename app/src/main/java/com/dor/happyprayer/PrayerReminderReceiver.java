@@ -14,13 +14,13 @@ import android.net.Uri;
 import android.os.Build;
 
 public final class PrayerReminderReceiver extends BroadcastReceiver {
-    private static final String CHANNEL_ID_PREFIX = "happy_prayer_daily_v2_";
+    private static final String CHANNEL_ID_PREFIX = "happy_prayer_daily_v5_";
 
     @Override
     public void onReceive(Context context, Intent intent) {
         int slotId = intent.getIntExtra("slot_id", 0);
         int soundMode = ReminderScheduler.getSoundMode(context);
-        String channelId = channelId(soundMode);
+        String channelId = channelId(soundMode, ReminderScheduler.isPopupEnabled(context));
         createChannel(context, soundMode, channelId);
 
         Intent openIntent = new Intent(context, MainActivity.class);
@@ -49,7 +49,7 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
         } else {
             builder = new Notification.Builder(context);
         }
-        builder.setSmallIcon(R.drawable.app_icon)
+        builder.setSmallIcon(R.drawable.notification_icon)
                 .setContentTitle("שכולם יהיו מאושרים ושמחים")
                 .setContentText(message)
                 .setStyle(new Notification.BigTextStyle().bigText(message))
@@ -57,8 +57,14 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setContentIntent(openPendingIntent)
                 .addAction(android.R.drawable.ic_dialog_info, "פתח", popupPendingIntent)
-                .setAutoCancel(true)
-                .setSound(soundUri(context, soundMode));
+                .setAutoCancel(true);
+        // When the immersive popup is active it owns the audio. Playing the old notification
+        // sample at the same time caused the harsh, doubled sound users could hear.
+        if (!ReminderScheduler.isPopupEnabled(context)) {
+            builder.setSound(soundUri(context, soundMode));
+        } else {
+            builder.setSound(null);
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             builder.setVisibility(Notification.VISIBILITY_PUBLIC);
         }
@@ -105,13 +111,17 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
                 NotificationManager.IMPORTANCE_HIGH
         );
         channel.setDescription("תזכורות יומיות שכולם יהיו מאושרים ושמחים");
-        channel.setSound(soundUri(context, soundMode), attributes);
+        if (ReminderScheduler.isPopupEnabled(context)) {
+            channel.setSound(null, null);
+        } else {
+            channel.setSound(soundUri(context, soundMode), attributes);
+        }
         channel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         manager.createNotificationChannel(channel);
     }
 
-    private static String channelId(int soundMode) {
-        return CHANNEL_ID_PREFIX + soundMode;
+    private static String channelId(int soundMode, boolean popupEnabled) {
+        return CHANNEL_ID_PREFIX + soundMode + (popupEnabled ? "_immersive" : "_notification");
     }
 
     private static Uri soundUri(Context context, int soundMode) {
