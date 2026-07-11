@@ -1,6 +1,8 @@
 package com.dor.happyprayer;
 
 import android.app.Activity;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -32,6 +34,8 @@ public final class ReminderPopupActivity extends Activity {
 
         Window window = getWindow();
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        window.setStatusBarColor(Color.TRANSPARENT);
+        window.setNavigationBarColor(Color.rgb(5, 40, 47));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
@@ -40,7 +44,12 @@ public final class ReminderPopupActivity extends Activity {
             window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
 
-        setContentView(buildContent());
+        View content = buildContent();
+        setContentView(content);
+        content.setAlpha(0f);
+        content.setScaleX(.97f);
+        content.setScaleY(.97f);
+        content.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(650).start();
         playSound();
     }
 
@@ -113,6 +122,15 @@ public final class ReminderPopupActivity extends Activity {
         heart.setTextColor(ROSE);
         heart.setGravity(Gravity.CENTER);
         root.addView(heart);
+        ObjectAnimator pulseX = ObjectAnimator.ofFloat(heart, View.SCALE_X, 1f, 1.10f, 1f);
+        ObjectAnimator pulseY = ObjectAnimator.ofFloat(heart, View.SCALE_Y, 1f, 1.10f, 1f);
+        pulseX.setDuration(2100);
+        pulseY.setDuration(2100);
+        pulseX.setRepeatCount(ObjectAnimator.INFINITE);
+        pulseY.setRepeatCount(ObjectAnimator.INFINITE);
+        AnimatorSet heartbeat = new AnimatorSet();
+        heartbeat.playTogether(pulseX, pulseY);
+        heartbeat.start();
 
         LinearLayout messagePanel = new LinearLayout(this);
         messagePanel.setOrientation(LinearLayout.VERTICAL);
@@ -160,7 +178,7 @@ public final class ReminderPopupActivity extends Activity {
         root.addView(footer, footerParams);
 
         Button closeButton = new Button(this);
-        closeButton.setText("סגור");
+        closeButton.setText("קיבלתי באהבה  ✦");
         closeButton.setAllCaps(false);
         closeButton.setTextSize(19);
         closeButton.setTextColor(Color.WHITE);
@@ -171,6 +189,7 @@ public final class ReminderPopupActivity extends Activity {
         );
         closeBackground.setCornerRadius(dp(16));
         closeButton.setBackground(closeBackground);
+        closeButton.setElevation(dp(4));
         closeButton.setOnClickListener(v -> finish());
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,

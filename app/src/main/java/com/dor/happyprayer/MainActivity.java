@@ -24,6 +24,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
@@ -73,9 +74,17 @@ public final class MainActivity extends Activity {
     }
 
     private View buildContent() {
+        FrameLayout scene = new FrameLayout(this);
+        scene.setBackground(gradient(Color.rgb(228, 247, 246), Color.rgb(255, 249, 235), Color.rgb(244, 238, 255)));
+        scene.addView(new AuroraBackgroundView(this), new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+
         ScrollView scrollView = new ScrollView(this);
         scrollView.setFillViewport(true);
-        scrollView.setBackground(gradient(Color.rgb(218, 245, 241), Color.rgb(255, 250, 237), Color.rgb(246, 241, 255)));
+        scrollView.setClipToPadding(false);
+        scrollView.setVerticalScrollBarEnabled(false);
+        scene.addView(scrollView, new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -224,7 +233,10 @@ public final class MainActivity extends Activity {
         });
         soundCard.addView(stopPreviewButton);
 
-        return scrollView;
+        root.setAlpha(0f);
+        root.setTranslationY(dp(18));
+        root.animate().alpha(1f).translationY(0f).setDuration(520).start();
+        return scene;
     }
 
     private View metricRow() {
@@ -531,6 +543,16 @@ public final class MainActivity extends Activity {
         button.setSingleLine(false);
         button.setEllipsize(TextUtils.TruncateAt.END);
         button.setBackground(cardBackground(backgroundColor, Color.TRANSPARENT, 14));
+        button.setStateListAnimator(null);
+        button.setOnTouchListener((view, event) -> {
+            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                view.animate().scaleX(.975f).scaleY(.975f).alpha(.88f).setDuration(90).start();
+            } else if (event.getAction() == android.view.MotionEvent.ACTION_UP ||
+                    event.getAction() == android.view.MotionEvent.ACTION_CANCEL) {
+                view.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(150).start();
+            }
+            return false;
+        });
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 dp(52)
@@ -830,6 +852,41 @@ public final class MainActivity extends Activity {
             heart.cubicTo(-size * 1.18f, -size * 0.18f, -size * 0.68f, -size * 1.08f, 0, -size * 0.55f);
             heart.cubicTo(size * 0.68f, -size * 1.08f, size * 1.18f, -size * 0.18f, 0, size * 0.42f);
             heart.close();
+        }
+
+        private float dpLocal(float value) {
+            return value * getResources().getDisplayMetrics().density;
+        }
+    }
+
+    /** A slow, battery-light aurora that gives the whole screen depth without image assets. */
+    private static final class AuroraBackgroundView extends View {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        AuroraBackgroundView(android.content.Context context) {
+            super(context);
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            float w = getWidth();
+            float h = getHeight();
+            float t = System.currentTimeMillis() / 7000f;
+            glow(canvas, w * (.12f + .04f * (float) Math.sin(t)), h * .13f, w * .46f, Color.argb(30, 22, 170, 150));
+            glow(canvas, w * (.88f + .03f * (float) Math.cos(t * .8f)), h * .38f, w * .42f, Color.argb(24, 255, 120, 170));
+            glow(canvas, w * .28f, h * (.72f + .025f * (float) Math.sin(t * .7f)), w * .52f, Color.argb(22, 120, 88, 255));
+            paint.setColor(Color.argb(28, 255, 255, 255));
+            for (int i = 0; i < 18; i++) {
+                float x = (i * 97f) % Math.max(1f, w);
+                float y = (i * 173f + t * 34f) % Math.max(1f, h);
+                canvas.drawCircle(x, y, dpLocal(i % 3 == 0 ? 2.2f : 1.2f), paint);
+            }
+            postInvalidateDelayed(40);
+        }
+
+        private void glow(Canvas canvas, float x, float y, float radius, int color) {
+            paint.setColor(color);
+            canvas.drawCircle(x, y, radius, paint);
         }
 
         private float dpLocal(float value) {
