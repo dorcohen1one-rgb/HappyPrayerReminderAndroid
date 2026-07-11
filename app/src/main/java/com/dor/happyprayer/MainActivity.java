@@ -11,6 +11,8 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -206,7 +208,7 @@ public final class MainActivity extends Activity {
         soundTitle.setGravity(Gravity.RIGHT);
         soundCard.addView(soundTitle);
 
-        TextView soundText = text("בחר את האופי של הרגע: פעמון קריסטל, מיטת סאונד רגועה, צלצולי אור, קול נשמה או מנטרה שלווה.", 16, MUTED, Typeface.NORMAL);
+        TextView soundText = text("בחר עולם קולי. כל הפעלה נוצרת מחדש בזמן אמת עם הרמוניות, נשימה, תנועה סטריאופונית וצלילי כוכבים שאינם חוזרים בדיוק באותה צורה.", 16, MUTED, Typeface.NORMAL);
         soundText.setGravity(Gravity.RIGHT);
         soundCard.addView(soundText);
 
@@ -438,7 +440,7 @@ public final class MainActivity extends Activity {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(18), dp(18), dp(18), dp(18));
         card.setBackground(cardBackground(color, strokeColor, radiusDp));
-        card.setElevation(dp(2));
+        card.setElevation(dp(7));
 
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -487,7 +489,14 @@ public final class MainActivity extends Activity {
     }
 
     private Button primaryButton(String label) {
-        return styledButton(label, TEAL, Color.WHITE, 18);
+        Button button = styledButton(label, TEAL, Color.WHITE, 18);
+        GradientDrawable background = new GradientDrawable(
+                GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{Color.rgb(88, 46, 165), Color.rgb(0, 151, 143), Color.rgb(15, 184, 166)});
+        background.setCornerRadius(dp(16));
+        button.setBackground(background);
+        button.setElevation(dp(4));
+        return button;
     }
 
     private Button secondaryButton(String label) {
@@ -888,8 +897,12 @@ public final class MainActivity extends Activity {
         }
 
         private void glow(Canvas canvas, float x, float y, float radius, int color) {
-            paint.setColor(color);
+            paint.setShader(new RadialGradient(x, y, radius,
+                    new int[]{color, Color.argb(Color.alpha(color) / 3,
+                            Color.red(color), Color.green(color), Color.blue(color)), Color.TRANSPARENT},
+                    new float[]{0f, .48f, 1f}, Shader.TileMode.CLAMP));
             canvas.drawCircle(x, y, radius, paint);
+            paint.setShader(null);
         }
 
         private float dpLocal(float value) {

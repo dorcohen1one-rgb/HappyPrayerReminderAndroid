@@ -9,40 +9,23 @@ final class ReminderSoundPlayer {
     private MediaPlayer bedPlayer;
     private MediaPlayer accentPlayer;
     private MediaPlayer voicePlayer;
+    private ProceduralSoundscape soundscape;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     void play(Context context, int soundMode, String message, int seconds) {
         stop();
+        soundscape = new ProceduralSoundscape();
         if (soundMode == ReminderScheduler.SOUND_MANTRA) {
-            playBed(context, R.raw.calm_pad, 0.12f);
-            mainHandler.postDelayed(() -> playAccent(context, R.raw.soft_chimes, 0.075f), 650);
+            soundscape.play(1, seconds);
             playVoice(context, R.raw.mantra_voice);
             return;
         }
         if (soundMode == ReminderScheduler.SOUND_VOICE) {
-            playBed(context, R.raw.calm_pad, 0.09f);
-            mainHandler.postDelayed(() -> playAccent(context, R.raw.gentle_bell, 0.055f), 450);
+            soundscape.play(1, seconds);
             playVoice(context, R.raw.default_voice);
             return;
         }
-
-        if (soundMode == ReminderScheduler.SOUND_BELL) {
-            playAccent(context, R.raw.gentle_bell, 0.48f);
-            mainHandler.postDelayed(() -> playBed(context, R.raw.soft_chimes, 0.16f), 1150);
-            return;
-        }
-
-        int soundResource = R.raw.gentle_bell;
-        float volume = 0.48f;
-        if (soundMode == ReminderScheduler.SOUND_CALM_PAD) {
-            soundResource = R.raw.calm_pad;
-            volume = 0.38f;
-        } else if (soundMode == ReminderScheduler.SOUND_SOFT_CHIMES) {
-            soundResource = R.raw.soft_chimes;
-            volume = 0.46f;
-        }
-
-        playBed(context, soundResource, volume);
+        soundscape.play(soundMode, seconds);
     }
 
     void stop() {
@@ -53,6 +36,8 @@ final class ReminderSoundPlayer {
         stopPlayer(voicePlayer);
         voicePlayer = null;
         mainHandler.removeCallbacksAndMessages(null);
+        if (soundscape != null) soundscape.stop();
+        soundscape = null;
     }
 
     private void playBed(Context context, int soundResource, float volume) {

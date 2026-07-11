@@ -22,11 +22,11 @@ final class ReminderScheduler {
     static final int SOUND_VOICE = 3;
     static final int SOUND_MANTRA = 4;
     static final String[] SOUND_LABELS = {
-            "פעמון קריסטל",
-            "מיטת סאונד רגועה",
-            "צלצולי אור",
-            "קול נשמה",
-            "מנטרה שלווה"
+            "מקדש קריסטל גנרטיבי",
+            "נשימה קוסמית",
+            "גשם כוכבים פנטטוני",
+            "קול נשמה בחלל חי",
+            "מנטרה בתוך אורורה"
     };
     private static final int[][] DEFAULT_TIMES = {
             {9, 0},
