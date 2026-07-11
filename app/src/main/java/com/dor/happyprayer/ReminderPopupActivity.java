@@ -1,13 +1,14 @@
 package com.dor.happyprayer;
 
 import android.app.Activity;
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RadialGradient;
 import android.graphics.RectF;
+import android.graphics.Shader;
+import android.graphics.SweepGradient;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -116,21 +117,9 @@ public final class ReminderPopupActivity extends Activity {
         sparkle.setGravity(Gravity.CENTER);
         root.addView(sparkle);
 
-        TextView heart = new TextView(this);
-        heart.setText("♥");
-        heart.setTextSize(78);
-        heart.setTextColor(ROSE);
-        heart.setGravity(Gravity.CENTER);
-        root.addView(heart);
-        ObjectAnimator pulseX = ObjectAnimator.ofFloat(heart, View.SCALE_X, 1f, 1.10f, 1f);
-        ObjectAnimator pulseY = ObjectAnimator.ofFloat(heart, View.SCALE_Y, 1f, 1.10f, 1f);
-        pulseX.setDuration(2100);
-        pulseY.setDuration(2100);
-        pulseX.setRepeatCount(ObjectAnimator.INFINITE);
-        pulseY.setRepeatCount(ObjectAnimator.INFINITE);
-        AnimatorSet heartbeat = new AnimatorSet();
-        heartbeat.playTogether(pulseX, pulseY);
-        heartbeat.start();
+        BreathRitualView ritual = new BreathRitualView(this);
+        root.addView(ritual, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(196)));
 
         LinearLayout messagePanel = new LinearLayout(this);
         messagePanel.setOrientation(LinearLayout.VERTICAL);
@@ -311,6 +300,114 @@ public final class ReminderPopupActivity extends Activity {
             }
 
             postInvalidateOnAnimation();
+        }
+
+        private float dpLocal(float value) {
+            return value * getResources().getDisplayMetrics().density;
+        }
+    }
+
+    /** A screen-free-friendly ritual: light, words and touch all share one breathing rhythm. */
+    private static final class BreathRitualView extends View {
+        private static final long CYCLE_MS = 9000L;
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF ring = new RectF();
+        private long startTime;
+        private int lastPhase = -1;
+        private float touchX = -1;
+        private float touchY = -1;
+        private long touchTime;
+
+        BreathRitualView(android.content.Context context) {
+            super(context);
+            setClickable(true);
+            setContentDescription("מנחה נשימה חי. שאיפה ונשיפה בקצב האור");
+            setOnClickListener(v -> {
+                if (touchX < 0) {
+                    touchX = getWidth() / 2f;
+                    touchY = getHeight() / 2f;
+                }
+                touchTime = System.currentTimeMillis();
+                performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM);
+                invalidate();
+            });
+        }
+
+        @Override protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            startTime = System.currentTimeMillis();
+            postInvalidateOnAnimation();
+        }
+
+        @Override public boolean onTouchEvent(android.view.MotionEvent event) {
+            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                touchX = event.getX();
+                touchY = event.getY();
+                touchTime = System.currentTimeMillis();
+                performClick();
+                return true;
+            }
+            return super.onTouchEvent(event);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float w = getWidth(), h = getHeight();
+            float cx = w / 2f, cy = h * .46f;
+            long now = System.currentTimeMillis();
+            float cycle = ((now - startTime) % CYCLE_MS) / (float) CYCLE_MS;
+            boolean inhale = cycle < .44f;
+            boolean hold = cycle >= .44f && cycle < .56f;
+            int phase = inhale ? 0 : hold ? 1 : 2;
+            if (phase != lastPhase) {
+                performHapticFeedback(phase == 1
+                        ? android.view.HapticFeedbackConstants.CONFIRM
+                        : android.view.HapticFeedbackConstants.CLOCK_TICK);
+                lastPhase = phase;
+            }
+
+            float breath = cycle < .44f
+                    ? ease(cycle / .44f)
+                    : cycle < .56f ? 1f : 1f - ease((cycle - .56f) / .44f);
+            float radius = dpLocal(38) + dpLocal(27) * breath;
+
+            paint.setShader(new RadialGradient(cx, cy, radius * 1.75f,
+                    new int[]{Color.argb(225, 255, 91, 176), Color.argb(145, 80, 238, 214), Color.TRANSPARENT},
+                    new float[]{0f, .48f, 1f}, Shader.TileMode.CLAMP));
+            canvas.drawCircle(cx, cy, radius * 1.75f, paint);
+            paint.setShader(null);
+
+            ring.set(cx - radius, cy - radius, cx + radius, cy + radius);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(dpLocal(4));
+            paint.setShader(new SweepGradient(cx, cy,
+                    new int[]{Color.rgb(118, 255, 226), Color.rgb(177, 102, 255), Color.rgb(255, 100, 174), Color.rgb(118, 255, 226)}, null));
+            canvas.drawOval(ring, paint);
+            paint.setShader(null);
+            paint.setStyle(Paint.Style.FILL);
+
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTypeface(Typeface.DEFAULT_BOLD);
+            paint.setTextSize(dpLocal(20));
+            paint.setColor(Color.rgb(30, 25, 68));
+            canvas.drawText(inhale ? "שאיפה" : hold ? "להחזיק" : "נשיפה", cx, cy + dpLocal(7), paint);
+            paint.setTextSize(dpLocal(12));
+            paint.setColor(Color.rgb(83, 81, 115));
+            canvas.drawText("האור והצליל נושמים איתך", cx, h - dpLocal(8), paint);
+
+            float rippleAge = (now - touchTime) / 900f;
+            if (touchX >= 0 && rippleAge < 1f) {
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(dpLocal(2));
+                paint.setColor(Color.argb((int) (150 * (1 - rippleAge)), 106, 255, 226));
+                canvas.drawCircle(touchX, touchY, dpLocal(12 + 70 * rippleAge), paint);
+                paint.setStyle(Paint.Style.FILL);
+            }
+            postInvalidateDelayed(24);
+        }
+
+        private float ease(float value) {
+            return .5f - .5f * (float) Math.cos(Math.PI * Math.max(0, Math.min(1, value)));
         }
 
         private float dpLocal(float value) {
