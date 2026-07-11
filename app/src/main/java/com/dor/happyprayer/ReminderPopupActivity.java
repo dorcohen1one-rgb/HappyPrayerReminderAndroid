@@ -63,7 +63,7 @@ public final class ReminderPopupActivity extends Activity {
         FrameLayout screen = new FrameLayout(this);
         GradientDrawable background = new GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                new int[]{Color.rgb(5, 40, 47), Color.rgb(0, 97, 88), Color.rgb(255, 243, 221), Color.rgb(247, 238, 255)}
+                new int[]{Color.rgb(6, 9, 36), Color.rgb(51, 25, 111), Color.rgb(0, 138, 137), Color.rgb(151, 36, 111)}
         );
         screen.setBackground(background);
         screen.setPadding(dp(14), dp(18), dp(14), dp(18));
@@ -83,7 +83,7 @@ public final class ReminderPopupActivity extends Activity {
                 new int[]{Color.WHITE, Color.rgb(245, 253, 251), Color.rgb(255, 251, 241)}
         );
         card.setCornerRadius(dp(30));
-        card.setStroke(dp(2), Color.rgb(181, 225, 216));
+        card.setStroke(dp(2), Color.rgb(116, 240, 217));
         root.setBackground(card);
         root.setElevation(dp(10));
 

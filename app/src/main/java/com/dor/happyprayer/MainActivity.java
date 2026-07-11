@@ -75,7 +75,7 @@ public final class MainActivity extends Activity {
 
     private View buildContent() {
         FrameLayout scene = new FrameLayout(this);
-        scene.setBackground(gradient(Color.rgb(228, 247, 246), Color.rgb(255, 249, 235), Color.rgb(244, 238, 255)));
+        scene.setBackground(gradient(Color.rgb(7, 12, 32), Color.rgb(18, 16, 58), Color.rgb(6, 42, 51)));
         scene.addView(new AuroraBackgroundView(this), new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
@@ -89,12 +89,12 @@ public final class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(dp(14), dp(18), dp(14), dp(28));
+        root.setPadding(dp(14), dp(22), dp(14), dp(34));
         scrollView.addView(root);
 
         LinearLayout prayerCard = gradientCard(
-                new int[]{Color.rgb(255, 255, 255), Color.rgb(238, 252, 248), Color.rgb(255, 246, 227)},
-                Color.rgb(177, 222, 214),
+                new int[]{Color.rgb(34, 23, 92), Color.rgb(14, 104, 112), Color.rgb(117, 42, 122)},
+                Color.rgb(120, 238, 218),
                 26
         );
         prayerCard.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -107,23 +107,23 @@ public final class MainActivity extends Activity {
                 dp(172)
         ));
 
-        TextView title = text("שכולם יהיו מאושרים ושמחים", 34, INK, Typeface.BOLD);
+        TextView title = text("שכולם יהיו מאושרים ושמחים", 34, Color.WHITE, Typeface.BOLD);
         title.setMaxLines(3);
         title.setEllipsize(null);
         prayerCard.addView(title);
 
-        TextView subtitle = text("רגע קטן ביום שפותח את הלב", 20, TEAL, Typeface.BOLD);
+        TextView subtitle = text("רגע קטן ביום שפותח את הלב", 20, Color.rgb(127, 255, 224), Typeface.BOLD);
         prayerCard.addView(subtitle);
 
-        TextView body = text("תזכורות אישיות עם מנטרה, קול, מוזיקה עדינה ומסך שמרגיש כמו עצירה טובה.", 16, MUTED, Typeface.NORMAL);
+        TextView body = text("תזכורות אישיות עם מנטרה, קול, מוזיקה עדינה ומסך שמרגיש כמו עצירה טובה.", 16, Color.rgb(229, 231, 255), Typeface.NORMAL);
         body.setPadding(0, dp(8), 0, 0);
         prayerCard.addView(body);
 
         prayerCard.addView(metricRow());
 
         LinearLayout statusCard = gradientCard(
-                new int[]{Color.rgb(12, 37, 43), Color.rgb(0, 105, 92), Color.rgb(15, 150, 126)},
-                Color.rgb(168, 218, 210),
+                new int[]{Color.rgb(20, 20, 65), Color.rgb(75, 35, 125), Color.rgb(0, 151, 143)},
+                Color.rgb(145, 242, 221),
                 22
         );
         statusCard.setGravity(Gravity.RIGHT);
@@ -154,7 +154,9 @@ public final class MainActivity extends Activity {
         realTestButton.setOnClickListener(v -> scheduleOneMinuteTest());
         statusCard.addView(realTestButton);
 
-        LinearLayout remindersCard = card(Color.rgb(255, 255, 255), Color.rgb(219, 231, 234), 20);
+        LinearLayout remindersCard = gradientCard(
+                new int[]{Color.rgb(255, 255, 255), Color.rgb(244, 248, 255), Color.rgb(241, 255, 251)},
+                Color.rgb(153, 216, 223), 22);
         remindersCard.setGravity(Gravity.RIGHT);
         root.addView(remindersCard);
 
@@ -193,8 +195,8 @@ public final class MainActivity extends Activity {
         remindersCard.addView(alarmButton);
 
         LinearLayout soundCard = gradientCard(
-                new int[]{Color.WHITE, Color.rgb(247, 253, 251), Color.rgb(255, 250, 238)},
-                Color.rgb(221, 231, 235),
+                new int[]{Color.rgb(255, 252, 255), Color.rgb(242, 237, 255), Color.rgb(230, 255, 249)},
+                Color.rgb(190, 162, 235),
                 20
         );
         soundCard.setGravity(Gravity.RIGHT);
@@ -564,10 +566,10 @@ public final class MainActivity extends Activity {
 
     private void styleSystemBars() {
         Window window = getWindow();
-        window.setStatusBarColor(Color.rgb(226, 247, 243));
-        window.setNavigationBarColor(Color.rgb(246, 241, 255));
+        window.setStatusBarColor(Color.rgb(7, 12, 32));
+        window.setNavigationBarColor(Color.rgb(6, 42, 51));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+            window.getDecorView().setSystemUiVisibility(0);
         }
     }
 
@@ -872,14 +874,15 @@ public final class MainActivity extends Activity {
             float w = getWidth();
             float h = getHeight();
             float t = System.currentTimeMillis() / 7000f;
-            glow(canvas, w * (.12f + .04f * (float) Math.sin(t)), h * .13f, w * .46f, Color.argb(30, 22, 170, 150));
-            glow(canvas, w * (.88f + .03f * (float) Math.cos(t * .8f)), h * .38f, w * .42f, Color.argb(24, 255, 120, 170));
-            glow(canvas, w * .28f, h * (.72f + .025f * (float) Math.sin(t * .7f)), w * .52f, Color.argb(22, 120, 88, 255));
-            paint.setColor(Color.argb(28, 255, 255, 255));
-            for (int i = 0; i < 18; i++) {
+            glow(canvas, w * (.08f + .09f * (float) Math.sin(t)), h * .12f, w * .52f, Color.argb(105, 0, 232, 205));
+            glow(canvas, w * (.92f + .06f * (float) Math.cos(t * .8f)), h * .34f, w * .48f, Color.argb(92, 255, 44, 151));
+            glow(canvas, w * .24f, h * (.70f + .04f * (float) Math.sin(t * .7f)), w * .58f, Color.argb(88, 112, 62, 255));
+            glow(canvas, w * .88f, h * .88f, w * .42f, Color.argb(70, 0, 205, 225));
+            paint.setColor(Color.argb(145, 255, 255, 255));
+            for (int i = 0; i < 30; i++) {
                 float x = (i * 97f) % Math.max(1f, w);
                 float y = (i * 173f + t * 34f) % Math.max(1f, h);
-                canvas.drawCircle(x, y, dpLocal(i % 3 == 0 ? 2.2f : 1.2f), paint);
+                canvas.drawCircle(x, y, dpLocal(i % 4 == 0 ? 2.5f : 1.1f), paint);
             }
             postInvalidateDelayed(40);
         }
