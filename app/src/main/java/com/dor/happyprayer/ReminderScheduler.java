@@ -53,7 +53,12 @@ final class ReminderScheduler {
 
     static void scheduleInMinutes(Context context, int slotId, int minutes) {
         int safeMinutes = Math.max(1, minutes);
-        scheduleAt(context, slotId, System.currentTimeMillis() + safeMinutes * 60_000L);
+        scheduleAt(context, slotId, System.currentTimeMillis() + safeMinutes * 60_000L, false);
+    }
+
+    static void scheduleTestInMinutes(Context context, int slotId, int minutes) {
+        int safeMinutes = Math.max(1, minutes);
+        scheduleAt(context, slotId, System.currentTimeMillis() + safeMinutes * 60_000L, true);
     }
 
     static long nextTriggerMillis(Context context, ReminderSlot slot) {
@@ -69,11 +74,16 @@ final class ReminderScheduler {
     }
 
     private static void scheduleAt(Context context, int slotId, long triggerAtMillis) {
+        scheduleAt(context, slotId, triggerAtMillis, false);
+    }
+
+    private static void scheduleAt(Context context, int slotId, long triggerAtMillis, boolean explicitTest) {
         AlarmManager alarmManager = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarmManager == null) return;
 
         Intent intent = new Intent(context, PrayerReminderReceiver.class);
         intent.putExtra("slot_id", slotId);
+        intent.putExtra("explicit_test", explicitTest);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 context,
                 slotId,

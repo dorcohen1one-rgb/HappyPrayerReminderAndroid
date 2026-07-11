@@ -745,7 +745,16 @@ public final class MainActivity extends Activity {
             Toast.makeText(this, "אין תזכורות לבדיקה", Toast.LENGTH_SHORT).show();
             return;
         }
-        ReminderScheduler.scheduleInMinutes(this, slots.get(0).id, 1);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            AlarmManager alarmManager = getSystemService(AlarmManager.class);
+            if (alarmManager != null && !alarmManager.canScheduleExactAlarms()) {
+                Toast.makeText(this, "כדי שהבדיקה תפעל בדיוק בעוד דקה, יש לאשר התראות מדויקות ואז ללחוץ שוב", Toast.LENGTH_LONG).show();
+                Intent settingsIntent = ReminderScheduler.exactAlarmSettingsIntent();
+                if (settingsIntent != null) startActivity(settingsIntent);
+                return;
+            }
+        }
+        ReminderScheduler.scheduleTestInMinutes(this, slots.get(0).id, 1);
         Toast.makeText(this, "נקבעה בדיקת התראה בעוד דקה", Toast.LENGTH_LONG).show();
     }
 

@@ -20,7 +20,8 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         int slotId = intent.getIntExtra("slot_id", 0);
-        if (ReminderScheduler.isAirplanePauseEnabled(context) && isAirplaneModeOn(context)) {
+        boolean explicitTest = intent.getBooleanExtra("explicit_test", false);
+        if (!explicitTest && ReminderScheduler.isAirplanePauseEnabled(context) && isAirplaneModeOn(context)) {
             ReminderSlot pausedSlot = ReminderScheduler.getSlot(context, slotId);
             if (pausedSlot != null && ReminderScheduler.isEnabled(context, pausedSlot)) {
                 ReminderScheduler.schedule(context, pausedSlot);
@@ -43,6 +44,7 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
         Intent popupIntent = new Intent(context, ReminderPopupActivity.class);
         popupIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
         popupIntent.putExtra("slot_id", slotId);
+        popupIntent.putExtra("is_test", explicitTest);
         PendingIntent popupPendingIntent = PendingIntent.getActivity(
                 context,
                 3000 + slotId,
