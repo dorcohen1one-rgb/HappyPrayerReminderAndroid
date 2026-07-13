@@ -1,0 +1,5 @@
+# Copy these values into local.properties on this computer. Never commit local.properties.
+release.storeFile=/Users/your-name/.android/happy-prayer-release.jks
+release.storePassword=replace-with-your-keystore-password
+release.keyAlias=happyprayer
+release.keyPassword=replace-with-your-key-password

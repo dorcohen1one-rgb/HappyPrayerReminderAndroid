@@ -2,6 +2,19 @@ plugins {
     id "com.android.application"
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { stream -> localProperties.load(stream) }
+}
+
+def releaseStoreFile = localProperties.getProperty("release.storeFile")
+def releaseStorePassword = localProperties.getProperty("release.storePassword")
+def releaseKeyAlias = localProperties.getProperty("release.keyAlias")
+def releaseKeyPassword = localProperties.getProperty("release.keyPassword")
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword]
+        .every { value -> value != null && !value.trim().isEmpty() }
+
 android {
     namespace "com.dor.happyprayer"
     compileSdk 35
@@ -10,7 +23,45 @@ android {
         applicationId "com.dor.happyprayer"
         minSdk 23
         targetSdk 35
-        versionCode 21
-        versionName "5.4"
+        versionCode 100
+        versionName "1.0"
     }
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            debuggable true
+        }
+        release {
+            debuggable false
+            minifyEnabled false
+            shrinkResources false
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+tasks.register("verifyReleaseSigning") {
+    doLast {
+        if (!hasReleaseSigning) {
+            throw new GradleException("Missing release signing settings. Add release.* entries to local.properties; see local.properties.example.")
+        }
+        if (!rootProject.file(releaseStoreFile).isFile()) {
+            throw new GradleException("Release keystore not found: " + releaseStoreFile)
+        }
+    }
+}
+
+tasks.matching { task -> task.name == "assembleRelease" }.configureEach {
+    dependsOn(tasks.named("verifyReleaseSigning"))
 }

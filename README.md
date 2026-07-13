@@ -31,3 +31,7 @@
 הצליל נמצא כאן:
 
 `app/src/main/res/raw/gentle_bell.wav`
+
+## הפצת Release חתומה
+
+גרסת הפצה נבנית רק בעזרת מפתח חתימה פרטי שנשמר מחוץ למאגר. הוראות מלאות נמצאות בקובץ `local.properties.example` ובסקריפט `release-and-publish.command`.
