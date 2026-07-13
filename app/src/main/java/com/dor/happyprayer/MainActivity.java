@@ -199,7 +199,7 @@ public final class MainActivity extends Activity {
         remindersCard.addView(popupCheckBox);
 
         CheckBox airplaneCheckBox = new CheckBox(this);
-        airplaneCheckBox.setText("שבת שקטה: לא להדליק מסך ולא להתריע במצב טיסה");
+        airplaneCheckBox.setText("במצב טיסה: השהה תזכורות");
         airplaneCheckBox.setTextSize(17);
         airplaneCheckBox.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         airplaneCheckBox.setTextDirection(View.TEXT_DIRECTION_RTL);
@@ -228,7 +228,7 @@ public final class MainActivity extends Activity {
         soundTitle.setGravity(Gravity.RIGHT);
         soundCard.addView(soundTitle);
 
-        TextView soundText = text("בחר עולם קולי. כל הפעלה נוצרת מחדש בזמן אמת עם הרמוניות, נשימה, תנועה סטריאופונית וצלילי כוכבים שאינם חוזרים בדיוק באותה צורה.", 16, MUTED, Typeface.NORMAL);
+        TextView soundText = text("לכל עולם קולי כלי מוביל, הרמוניה ותנועה משלו. בחרו את האווירה שמתאימה לרגע הזה.", 16, MUTED, Typeface.NORMAL);
         soundText.setGravity(Gravity.RIGHT);
         soundCard.addView(soundText);
 

@@ -22,17 +22,28 @@ final class ReminderSoundPlayer {
     void play(Context context, int soundMode, String message, int seconds) {
         stop();
         soundscape = new ProceduralSoundscape();
-        if (soundMode == ReminderScheduler.SOUND_MANTRA) {
-            soundscape.play(2, seconds);
-            speak(context, message, true);
-            return;
-        }
-        if (soundMode == ReminderScheduler.SOUND_VOICE) {
-            soundscape.play(1, seconds);
-            speak(context, message, false);
-            return;
-        }
         soundscape.play(soundMode, seconds);
+        switch (soundMode) {
+            case ReminderScheduler.SOUND_BELL:
+                playAccent(context, R.raw.gentle_bell, 0.18f);
+                break;
+            case ReminderScheduler.SOUND_CALM_PAD:
+                playBed(context, R.raw.calm_pad, 0.25f);
+                break;
+            case ReminderScheduler.SOUND_SOFT_CHIMES:
+                playBed(context, R.raw.soft_chimes, 0.20f);
+                break;
+            case ReminderScheduler.SOUND_VOICE:
+                playBed(context, R.raw.calm_pad, 0.11f);
+                speak(context, message, false);
+                break;
+            case ReminderScheduler.SOUND_MANTRA:
+                playBed(context, R.raw.soft_chimes, 0.08f);
+                speak(context, message, true);
+                break;
+            default:
+                break;
+        }
     }
 
     void stop() {
