@@ -35,3 +35,5 @@
 ## הפצת Release חתומה
 
 גרסת הפצה נבנית רק בעזרת מפתח חתימה פרטי שנשמר מחוץ למאגר. הוראות מלאות נמצאות בקובץ `local.properties.example` ובסקריפט `release-and-publish.command`.
+
+להגדרה מקומית אוטומטית ובטוחה של מפתח חתימה, מריצים `./create-release-key.command`. הסיסמה נשמרת ב-macOS Keychain ולא מוצגת.
