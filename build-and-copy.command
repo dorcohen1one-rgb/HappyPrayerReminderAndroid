@@ -4,11 +4,11 @@ set -e
 cd "${0:A:h}"
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
-echo "Building Happy Prayer Reminder 5.2..."
+echo "Building Happy Prayer Reminder 5.3..."
 ./gradlew --no-daemon assembleDebug
 
 mkdir -p apk-download
-cp app/build/outputs/apk/debug/app-debug.apk apk-download/HappyPrayerReminder-5.2.apk
+cp app/build/outputs/apk/debug/app-debug.apk apk-download/HappyPrayerReminder-5.3.apk
 cp app/build/outputs/apk/debug/app-debug.apk apk-download/HappyPrayerReminder-debug.apk
 
 echo

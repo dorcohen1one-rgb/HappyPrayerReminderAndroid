@@ -4,7 +4,7 @@ import android.media.AudioAttributes;
 import android.media.AudioFormat;
 import android.media.AudioTrack;
 
-/** A tiny generative instrument: every reminder becomes a soft, evolving performance. */
+/** A slow, layered ambient instrument with smooth envelopes and no repeated loop point. */
 final class ProceduralSoundscape {
     private static final int SAMPLE_RATE = 44100;
     private volatile boolean running;
@@ -50,18 +50,19 @@ final class ProceduralSoundscape {
 
         final int frames = 1024;
         short[] pcm = new short[frames * 2];
-        // Three intentionally consonant palettes: Cmaj7, D6 and Amaj7.
+        // Consonant palettes, voiced across octaves so they feel like a room rather than a ringtone.
         double[][] palettes = {
                 {130.81, 164.81, 196.00, 246.94, 523.25, 659.25, 783.99},
                 {146.83, 185.00, 220.00, 246.94, 587.33, 739.99, 880.00},
                 {110.00, 138.59, 164.81, 207.65, 440.00, 554.37, 659.25}
         };
         double[] notes = palettes[Math.max(0, Math.min(2, preset))];
-        double[] phases = new double[4];
+        double[] phases = new double[8];
         double bellPhase = 0;
         int totalFrames = seconds * SAMPLE_RATE;
         float bellStart = 1.8f;
         int bellIndex = 0;
+        long seed = System.nanoTime() ^ (preset * 7919L);
 
         for (int base = 0; running && base < totalFrames; base += frames) {
             int count = Math.min(frames, totalFrames - base);
@@ -75,15 +76,18 @@ final class ProceduralSoundscape {
                     bellPhase = 0;
                 }
 
-                double breath = .5 - .5 * Math.cos(Math.PI * 2 * time / 9.0);
+                double breath = .5 - .5 * Math.cos(Math.PI * 2 * time / 10.5);
                 double masterEnvelope = smooth(Math.min(1, time / 3.2))
                         * smooth(Math.min(1, (1 - progress) * 10));
                 double pad = 0;
-                double[] weights = {.38, .22, .17, .12};
+                double[] weights = {.28, .20, .16, .11};
                 for (int voice = 0; voice < 4; voice++) {
                     phases[voice] += Math.PI * 2 * notes[voice] / SAMPLE_RATE;
+                    // A lightly detuned companion keeps the chord warm without chorusing harshly.
+                    phases[voice + 4] += Math.PI * 2 * notes[voice] * (1.0017 + voice * .0004) / SAMPLE_RATE;
                     pad += Math.sin(phases[voice]) * weights[voice];
-                    pad += Math.sin(phases[voice] * .5) * weights[voice] * .12;
+                    pad += Math.sin(phases[voice + 4]) * weights[voice] * .42;
+                    pad += Math.sin(phases[voice] * .5) * weights[voice] * .10;
                 }
 
                 double bellAge = time - bellStart;
@@ -97,10 +101,14 @@ final class ProceduralSoundscape {
                             + Math.sin(bellPhase * 2) * .17
                             + Math.sin(bellPhase * 3) * .05);
                 }
-                double sample = (pad * (.045 + breath * .012) + bell * .085) * masterEnvelope;
-                double movement = .5 + .16 * Math.sin(time * .22);
-                pcm[i * 2] = toShort(sample * (1.06 - movement));
-                pcm[i * 2 + 1] = toShort(sample * (.06 + movement));
+                // Very low-level filtered noise gives the pad air, while deterministic randomness
+                // preserves a clean render thread without allocating during playback.
+                seed = seed * 6364136223846793005L + 1442695040888963407L;
+                double air = (((seed >>> 33) / (double) (1L << 31)) - 1.0) * .0022;
+                double sample = (pad * (.040 + breath * .014) + bell * .092 + air) * masterEnvelope;
+                double movement = .5 + .19 * Math.sin(time * .17 + preset);
+                pcm[i * 2] = toShort(sample * (1.08 - movement));
+                pcm[i * 2 + 1] = toShort(sample * (.04 + movement));
             }
             if (localTrack.write(pcm, 0, count * 2, AudioTrack.WRITE_BLOCKING) < 0) break;
         }

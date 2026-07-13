@@ -1,28 +1,35 @@
 package com.dor.happyprayer;
 
 import android.content.Context;
+import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.Looper;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import android.speech.tts.Voice;
+
+import java.util.Locale;
 
 final class ReminderSoundPlayer {
     private MediaPlayer bedPlayer;
     private MediaPlayer accentPlayer;
     private MediaPlayer voicePlayer;
     private ProceduralSoundscape soundscape;
+    private TextToSpeech speech;
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     void play(Context context, int soundMode, String message, int seconds) {
         stop();
         soundscape = new ProceduralSoundscape();
         if (soundMode == ReminderScheduler.SOUND_MANTRA) {
-            soundscape.play(1, seconds);
-            playVoice(context, R.raw.mantra_voice);
+            soundscape.play(2, seconds);
+            speak(context, message, true);
             return;
         }
         if (soundMode == ReminderScheduler.SOUND_VOICE) {
             soundscape.play(1, seconds);
-            playVoice(context, R.raw.default_voice);
+            speak(context, message, false);
             return;
         }
         soundscape.play(soundMode, seconds);
@@ -35,6 +42,11 @@ final class ReminderSoundPlayer {
         accentPlayer = null;
         stopPlayer(voicePlayer);
         voicePlayer = null;
+        if (speech != null) {
+            speech.stop();
+            speech.shutdown();
+            speech = null;
+        }
         mainHandler.removeCallbacksAndMessages(null);
         if (soundscape != null) soundscape.stop();
         soundscape = null;
@@ -58,16 +70,48 @@ final class ReminderSoundPlayer {
         fadeIn(accentPlayer, volume, 550);
     }
 
-    private void playVoice(Context context, int soundResource) {
-        voicePlayer = MediaPlayer.create(context.getApplicationContext(), soundResource);
-        if (voicePlayer == null) {
-            playAccent(context, R.raw.gentle_bell, 0.08f);
-            return;
+    private void speak(Context context, String message, boolean isMantra) {
+        String prayer = message == null || message.trim().isEmpty()
+                ? ReminderScheduler.DEFAULT_MESSAGE : message.trim();
+        String script = isMantra
+                ? "ניקח נשימה איטית. " + prayer + ". נניח למילים להישאר איתנו בשקט."
+                : "רגע לעצמך. " + prayer + ".";
+        speech = new TextToSpeech(context.getApplicationContext(), status -> {
+            if (status != TextToSpeech.SUCCESS || speech == null) return;
+            Locale hebrew = new Locale("he", "IL");
+            if (speech.setLanguage(hebrew) == TextToSpeech.LANG_MISSING_DATA) return;
+            selectBestHebrewVoice(hebrew);
+            speech.setSpeechRate(isMantra ? 0.76f : 0.84f);
+            speech.setPitch(isMantra ? 0.93f : 0.98f);
+            speech.setAudioAttributes(new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build());
+            speech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                @Override public void onStart(String utteranceId) { }
+                @Override public void onDone(String utteranceId) { }
+                @Override public void onError(String utteranceId) { }
+            });
+            mainHandler.postDelayed(() -> {
+                if (speech != null) speech.speak(script, TextToSpeech.QUEUE_FLUSH, null, "prayer-guidance");
+            }, 1100L);
+        });
+    }
+
+    private void selectBestHebrewVoice(Locale hebrew) {
+        if (speech == null || speech.getVoices() == null) return;
+        Voice best = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (Voice candidate : speech.getVoices()) {
+            if (!hebrew.getLanguage().equals(candidate.getLocale().getLanguage())) continue;
+            // Prefer the best voice that can play without a data connection. It remains reliable for alarms.
+            int score = candidate.getQuality() + (candidate.isNetworkConnectionRequired() ? 0 : 10_000);
+            if (score > bestScore) {
+                best = candidate;
+                bestScore = score;
+            }
         }
-        voicePlayer.setVolume(0.82f, 0.82f);
-        voicePlayer.setLooping(false);
-        voicePlayer.start();
-        fadeIn(voicePlayer, 0.82f, 700);
+        if (best != null) speech.setVoice(best);
     }
 
     private void fadeIn(MediaPlayer player, float target, int durationMs) {

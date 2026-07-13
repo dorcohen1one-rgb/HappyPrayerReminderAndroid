@@ -47,6 +47,7 @@ public final class MainActivity extends Activity {
     private static final int ROSE = Color.rgb(216, 27, 96);
     private static final int GOLD = Color.rgb(191, 138, 0);
     private ReminderSoundPlayer previewPlayer;
+    private ScrollView contentScrollView;
     private boolean contentReady;
 
     @Override
@@ -73,7 +74,9 @@ public final class MainActivity extends Activity {
     }
 
     private void refreshContent() {
+        final int scrollPosition = contentScrollView == null ? 0 : contentScrollView.getScrollY();
         setContentView(buildContent());
+        contentScrollView.post(() -> contentScrollView.scrollTo(0, scrollPosition));
     }
 
     private View buildContent() {
@@ -83,6 +86,7 @@ public final class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
 
         ScrollView scrollView = new ScrollView(this);
+        contentScrollView = scrollView;
         scrollView.setFillViewport(true);
         scrollView.setClipToPadding(false);
         scrollView.setVerticalScrollBarEnabled(false);
@@ -231,7 +235,7 @@ public final class MainActivity extends Activity {
         soundCard.addView(soundModeOptions());
         soundCard.addView(durationOptions());
 
-        Button playButton = primaryButton("השמעת הצליל שבחרתי");
+        Button playButton = primaryButton("להקשיב עכשיו");
         playButton.setOnClickListener(v -> {
             if (previewPlayer == null) previewPlayer = new ReminderSoundPlayer();
             int playbackSeconds = ReminderScheduler.getPlaybackSeconds(this, ReminderScheduler.getMessage(this));
@@ -247,7 +251,7 @@ public final class MainActivity extends Activity {
         });
         soundCard.addView(playButton);
 
-        Button stopPreviewButton = secondaryButton("עצירת השמעה");
+        Button stopPreviewButton = secondaryButton("סיים את ההאזנה");
         stopPreviewButton.setOnClickListener(v -> {
             if (previewPlayer != null) previewPlayer.stop();
         });
