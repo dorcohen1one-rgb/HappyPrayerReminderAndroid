@@ -26,16 +26,21 @@ git add -A
 git commit -m "Release Happy Prayer Reminder $VERSION" || true
 git push origin main
 
-if ! command -v gh >/dev/null 2>&1; then
+GH_BIN="$(command -v gh || true)"
+if [[ -z "$GH_BIN" && -x "$HOME/.local/bin/gh" ]]; then
+    GH_BIN="$HOME/.local/bin/gh"
+fi
+
+if [[ -z "$GH_BIN" ]]; then
     echo
-    echo "APK was built, but GitHub CLI is not installed. Install gh, run 'gh auth login', then run this script again to publish the Release."
+    echo "APK was built, but GitHub CLI is not installed. Run ./install-github-cli.command, then '$HOME/.local/bin/gh auth login', and run this script again."
     exit 0
 fi
 
-if gh release view "$VERSION" >/dev/null 2>&1; then
-    gh release upload "$VERSION" "$APK_PATH" "$CHECKSUM_PATH" --clobber
+if "$GH_BIN" release view "$VERSION" >/dev/null 2>&1; then
+    "$GH_BIN" release upload "$VERSION" "$APK_PATH" "$CHECKSUM_PATH" --clobber
 else
-    gh release create "$VERSION" "$APK_PATH" "$CHECKSUM_PATH" \
+    "$GH_BIN" release create "$VERSION" "$APK_PATH" "$CHECKSUM_PATH" \
         --title "Happy Prayer Reminder $VERSION" \
         --notes "Signed Android release. Verify the APK with the attached SHA-256 checksum before installation."
 fi
