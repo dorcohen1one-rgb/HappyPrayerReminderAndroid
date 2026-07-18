@@ -14,6 +14,8 @@ import android.graphics.RadialGradient;
 import android.graphics.Shader;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -35,6 +37,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.text.DateFormat;
+import java.io.File;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -43,6 +46,8 @@ import java.util.Locale;
 /** Main screen organized around an everyday pause, rather than a page of settings. */
 public final class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 42;
+    private static final int RECORD_AUDIO_PERMISSION_REQUEST = 43;
+    private static final int PICK_PERSONAL_AUDIO_REQUEST = 44;
     private static final int INK = Color.rgb(20, 35, 52);
     private static final int MUTED = Color.rgb(79, 96, 111);
     private static final int TEAL = Color.rgb(0, 118, 108);
@@ -50,18 +55,15 @@ public final class MainActivity extends Activity {
     private static final int GOLD = Color.rgb(208, 151, 43);
     private static final int SKY = Color.rgb(235, 247, 250);
     private static final String[] MUSIC_DESCRIPTIONS = {
-            "צלילים צלולים ונקיים לפתיחה עדינה.",
-            "הרמוניה חמה ונושמת שמאטה את הקצב.",
-            "פעמונים בהירים ותנועה שקטה של אור.",
-            "קול עברי רגוע עם ליווי רך.",
-            "הנחיה איטית, נשימה ומילים טובות.",
+            "קטע פסנתר אמיתי, רגוע ומלא.",
+            "פסנתר אמיתי ואווירה חולמנית, רכה ואיטית.",
             "רק המילים והמסך — ללא צליל כלל.",
-            "קטע פסנתר אמיתי, רגוע ומלא — ללא שכבת צליל מלאכותית.",
-            "פסנתר אמיתי ואווירה חולמנית, רכה ואיטית."
+            "הקלטה שלך או קובץ צליל שתבחרו מהמכשיר."
     };
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ReminderSoundPlayer previewPlayer;
+    private MediaRecorder personalRecorder;
     private ScrollView contentScrollView;
     private int section = 0;
     private boolean contentReady;
@@ -85,6 +87,7 @@ public final class MainActivity extends Activity {
     @Override protected void onDestroy() {
         contentReady = false;
         stopPreview();
+        stopPersonalRecording(false);
         super.onDestroy();
     }
 
@@ -275,6 +278,10 @@ public final class MainActivity extends Activity {
             track.addView(description);
             Button choose = i == selected ? outlineButton("נבחרה") : outlineButton("בחירה");
             choose.setOnClickListener(v -> {
+                if (mode == ReminderScheduler.SOUND_PERSONAL && !ReminderScheduler.hasPersonalAudio(this)) {
+                    showPersonalAudioDialog();
+                    return;
+                }
                 ReminderScheduler.saveSoundMode(this, mode);
                 refreshContent(true);
             });
@@ -302,6 +309,11 @@ public final class MainActivity extends Activity {
         TextView durationHint = text("המנגינה נעצרת אוטומטית אחרי הזמן שבחרתם.", 14, MUTED, Typeface.NORMAL);
         durationHint.setGravity(Gravity.RIGHT);
         duration.addView(durationHint);
+
+        Button personal = outlineButton(ReminderScheduler.hasPersonalAudio(this)
+                ? "ניהול הצליל שלי" : "+ הוספת הצליל שלי");
+        personal.setOnClickListener(v -> showPersonalAudioDialog());
+        page.addView(personal);
 
         Button play = primaryButton(previewPlaying ? "מנגנים עכשיו" : "האזנה למנגינה");
         play.setEnabled(!previewPlaying);
@@ -411,6 +423,115 @@ public final class MainActivity extends Activity {
         if (previewPlayer != null) previewPlayer.stop();
         previewPlaying = false;
         if (contentReady) refreshContent(true);
+    }
+
+    private void showPersonalAudioDialog() {
+        String[] choices = ReminderScheduler.hasPersonalAudio(this)
+                ? new String[]{"הקלטת מילים בקול שלי", "בחירת קובץ צליל מהמכשיר", "מחיקת הצליל האישי"}
+                : new String[]{"הקלטת מילים בקול שלי", "בחירת קובץ צליל מהמכשיר"};
+        new AlertDialog.Builder(this)
+                .setTitle("הצליל שלי")
+                .setItems(choices, (dialog, which) -> {
+                    if (which == 0) requestRecording();
+                    else if (which == 1) pickPersonalAudio();
+                    else clearPersonalAudio();
+                })
+                .setNegativeButton("ביטול", null)
+                .show();
+    }
+
+    private void requestRecording() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, RECORD_AUDIO_PERMISSION_REQUEST);
+            return;
+        }
+        startPersonalRecording();
+    }
+
+    private void startPersonalRecording() {
+        if (personalRecorder != null) return;
+        File destination = new File(getFilesDir(), "my_prayer_words.m4a");
+        try {
+            personalRecorder = new MediaRecorder();
+            personalRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            personalRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            personalRecorder.setOutputFile(destination.getAbsolutePath());
+            personalRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            personalRecorder.setAudioEncodingBitRate(128_000);
+            personalRecorder.setAudioSamplingRate(44_100);
+            personalRecorder.prepare();
+            personalRecorder.start();
+        } catch (Exception error) {
+            stopPersonalRecording(false);
+            Toast.makeText(this, "לא הצלחנו להתחיל הקלטה", Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("מקליטים עכשיו")
+                .setMessage("אמרו את המילים שתרצו לשמוע בתזכורת. כשתסיימו, לחצו סיום.")
+                .setNegativeButton("ביטול", (dialog, which) -> stopPersonalRecording(false))
+                .setPositiveButton("סיום ושמירה", (dialog, which) -> stopPersonalRecording(true))
+                .setOnCancelListener(dialog -> stopPersonalRecording(false))
+                .show();
+    }
+
+    private void stopPersonalRecording(boolean save) {
+        if (personalRecorder == null) return;
+        try {
+            personalRecorder.stop();
+        } catch (RuntimeException ignored) {
+            save = false;
+        }
+        personalRecorder.reset();
+        personalRecorder.release();
+        personalRecorder = null;
+        if (save) {
+            ReminderScheduler.savePersonalAudioUri(this, Uri.fromFile(new File(getFilesDir(), "my_prayer_words.m4a")).toString());
+            ReminderScheduler.saveSoundMode(this, ReminderScheduler.SOUND_PERSONAL);
+            Toast.makeText(this, "ההקלטה נשמרה ונבחרה", Toast.LENGTH_SHORT).show();
+            refreshContent(true);
+        }
+    }
+
+    private void pickPersonalAudio() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("audio/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(intent, PICK_PERSONAL_AUDIO_REQUEST);
+    }
+
+    private void clearPersonalAudio() {
+        ReminderScheduler.savePersonalAudioUri(this, "");
+        ReminderScheduler.saveSoundMode(this, ReminderScheduler.SOUND_MEDITATION_PIANO);
+        Toast.makeText(this, "הצליל האישי הוסר", Toast.LENGTH_SHORT).show();
+        refreshContent(true);
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == RECORD_AUDIO_PERMISSION_REQUEST
+                && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) {
+            startPersonalRecording();
+        } else if (requestCode == RECORD_AUDIO_PERMISSION_REQUEST) {
+            Toast.makeText(this, "צריך לאשר גישה למיקרופון כדי להקליט", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != PICK_PERSONAL_AUDIO_REQUEST || resultCode != RESULT_OK || data == null || data.getData() == null) return;
+        Uri uri = data.getData();
+        try {
+            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        } catch (SecurityException ignored) {
+            // Some providers do not offer persistent access; playback can still work for this session.
+        }
+        ReminderScheduler.savePersonalAudioUri(this, uri.toString());
+        ReminderScheduler.saveSoundMode(this, ReminderScheduler.SOUND_PERSONAL);
+        Toast.makeText(this, "הצליל האישי נשמר ונבחר", Toast.LENGTH_SHORT).show();
+        refreshContent(true);
     }
 
     private void showReminderEditor(ReminderSlot slot) {

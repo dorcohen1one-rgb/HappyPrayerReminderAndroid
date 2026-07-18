@@ -16,23 +16,15 @@ import java.util.Locale;
 final class ReminderScheduler {
     static final String PREFS = "happy_prayer_reminders";
     static final String DEFAULT_MESSAGE = "שכולם יהיו מאושרים ושמחים\nמכל העולם, מכל היצורים";
-    static final int SOUND_BELL = 0;
-    static final int SOUND_CALM_PAD = 1;
-    static final int SOUND_SOFT_CHIMES = 2;
-    static final int SOUND_VOICE = 3;
-    static final int SOUND_MANTRA = 4;
-    static final int SOUND_SILENT = 5;
-    static final int SOUND_MEDITATION_PIANO = 6;
-    static final int SOUND_SOFT_DAYDREAM = 7;
+    static final int SOUND_MEDITATION_PIANO = 0;
+    static final int SOUND_SOFT_DAYDREAM = 1;
+    static final int SOUND_SILENT = 2;
+    static final int SOUND_PERSONAL = 3;
     static final String[] SOUND_LABELS = {
-            "פעמונים שקטים",
-            "מרחב נשימה",
-            "אור ראשון",
-            "קול מונחה",
-            "מנטרה מונחית",
-            "ללא מנגינה",
             "פסנתר למדיטציה",
-            "חלום רך"
+            "חלום רך",
+            "ללא מנגינה",
+            "הצליל שלי"
     };
     private static final int[][] DEFAULT_TIMES = {
             {9, 0},
@@ -332,24 +324,31 @@ final class ReminderScheduler {
     }
 
     static int getPlaybackSeconds(Context context, String message) {
-        int seconds = getSoundSeconds(context);
-        int mode = getSoundMode(context);
-        if (mode == SOUND_VOICE || mode == SOUND_MANTRA) {
-            String text = message == null ? DEFAULT_MESSAGE : message.trim();
-            int estimated = 18 + Math.max(0, text.length() / 4);
-            return Math.max(seconds, Math.max(35, estimated));
-        }
-        return seconds;
+        return getSoundSeconds(context);
     }
 
     static int getSoundMode(Context context) {
-        int mode = prefs(context).getInt("sound_mode", SOUND_BELL);
-        if (mode < 0 || mode >= SOUND_LABELS.length) return SOUND_BELL;
+        int mode = prefs(context).getInt("sound_mode", SOUND_MEDITATION_PIANO);
+        // Versions through 1.5 used values 0-4 for older sounds and 6-7 for
+        // the two new tracks. Existing users are moved to the piano track.
+        if (mode < 0 || mode >= SOUND_LABELS.length) return SOUND_MEDITATION_PIANO;
         return mode;
     }
 
     static void saveSoundMode(Context context, int mode) {
         prefs(context).edit().putInt("sound_mode", mode).apply();
+    }
+
+    static String getPersonalAudioUri(Context context) {
+        return prefs(context).getString("personal_audio_uri", "");
+    }
+
+    static boolean hasPersonalAudio(Context context) {
+        return !getPersonalAudioUri(context).trim().isEmpty();
+    }
+
+    static void savePersonalAudioUri(Context context, String uri) {
+        prefs(context).edit().putString("personal_audio_uri", uri == null ? "" : uri).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

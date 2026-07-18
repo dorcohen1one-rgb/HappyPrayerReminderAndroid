@@ -135,18 +135,11 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
     }
 
     private static Uri soundUri(Context context, int soundMode) {
-        int soundResource = R.raw.gentle_bell;
-        if (soundMode == ReminderScheduler.SOUND_CALM_PAD) {
-            soundResource = R.raw.calm_pad;
-        } else if (soundMode == ReminderScheduler.SOUND_SOFT_CHIMES) {
-            soundResource = R.raw.soft_chimes;
-        } else if (soundMode == ReminderScheduler.SOUND_VOICE) {
-            soundResource = R.raw.default_voice;
-        } else if (soundMode == ReminderScheduler.SOUND_MANTRA) {
-            soundResource = R.raw.mantra_voice;
-        } else if (soundMode == ReminderScheduler.SOUND_MEDITATION_PIANO) {
-            soundResource = R.raw.meditation_piano;
-        } else if (soundMode == ReminderScheduler.SOUND_SOFT_DAYDREAM) {
+        if (soundMode == ReminderScheduler.SOUND_PERSONAL && ReminderScheduler.hasPersonalAudio(context)) {
+            return Uri.parse(ReminderScheduler.getPersonalAudioUri(context));
+        }
+        int soundResource = R.raw.meditation_piano;
+        if (soundMode == ReminderScheduler.SOUND_SOFT_DAYDREAM) {
             soundResource = R.raw.soft_daydream;
         }
         return Uri.parse("android.resource://" + context.getPackageName() + "/" + soundResource);
