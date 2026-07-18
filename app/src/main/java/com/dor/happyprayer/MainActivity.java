@@ -55,9 +55,9 @@ public final class MainActivity extends Activity {
             "פעמונים בהירים ותנועה שקטה של אור.",
             "קול עברי רגוע עם ליווי רך.",
             "הנחיה איטית, נשימה ומילים טובות.",
-            "מנגינה מקורית של מיתרים רכים, עלים ואור בין העצים.",
-            "קערות צליל נמוכות ואוויר רחב למדיטציה של ערב.",
-            "רק המילים והמסך — ללא צליל כלל."
+            "רק המילים והמסך — ללא צליל כלל.",
+            "קטע פסנתר אמיתי, רגוע ומלא — ללא שכבת צליל מלאכותית.",
+            "פסנתר אמיתי ואווירה חולמנית, רכה ואיטית."
     };
 
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -284,12 +284,12 @@ public final class MainActivity extends Activity {
 
         LinearLayout duration = card(Color.argb(238, 255, 255, 255), Color.argb(55, 10, 85, 82));
         page.addView(duration);
-        TextView durationTitle = text("משך ההאזנה", 18, INK, Typeface.BOLD);
+        TextView durationTitle = text("כמה לשמוע בכל פעם?", 18, INK, Typeface.BOLD);
         durationTitle.setGravity(Gravity.RIGHT);
         duration.addView(durationTitle);
         LinearLayout options = new LinearLayout(this);
         options.setGravity(Gravity.CENTER);
-        int[] values = {10, 20, 30, 60};
+        int[] values = {5, 10, 20, 30, 60};
         for (int seconds : values) {
             Button option = compactButton(seconds + " ש׳", seconds == ReminderScheduler.getSoundSeconds(this));
             option.setOnClickListener(v -> {
@@ -299,6 +299,9 @@ public final class MainActivity extends Activity {
             options.addView(option, new LinearLayout.LayoutParams(0, dp(48), 1));
         }
         duration.addView(options, matchWrap());
+        TextView durationHint = text("המנגינה נעצרת אוטומטית אחרי הזמן שבחרתם.", 14, MUTED, Typeface.NORMAL);
+        durationHint.setGravity(Gravity.RIGHT);
+        duration.addView(durationHint);
 
         Button play = primaryButton(previewPlaying ? "מנגנים עכשיו" : "האזנה למנגינה");
         play.setEnabled(!previewPlaying);

@@ -144,6 +144,10 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
             soundResource = R.raw.default_voice;
         } else if (soundMode == ReminderScheduler.SOUND_MANTRA) {
             soundResource = R.raw.mantra_voice;
+        } else if (soundMode == ReminderScheduler.SOUND_MEDITATION_PIANO) {
+            soundResource = R.raw.meditation_piano;
+        } else if (soundMode == ReminderScheduler.SOUND_SOFT_DAYDREAM) {
+            soundResource = R.raw.soft_daydream;
         }
         return Uri.parse("android.resource://" + context.getPackageName() + "/" + soundResource);
     }

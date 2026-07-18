@@ -21,10 +21,8 @@ final class ReminderSoundPlayer {
 
     void play(Context context, int soundMode, String message, int seconds) {
         stop();
-        if (soundMode != ReminderScheduler.SOUND_SILENT) {
-            soundscape = new ProceduralSoundscape();
-            soundscape.play(soundMode, seconds);
-        }
+        // The musical beds below are recorded tracks. Do not layer a generated loop over
+        // them: it made the reminder feel repetitive and synthetic.
         switch (soundMode) {
             case ReminderScheduler.SOUND_BELL:
                 playAccent(context, R.raw.gentle_bell, 0.18f);
@@ -43,8 +41,12 @@ final class ReminderSoundPlayer {
                 playBed(context, R.raw.soft_chimes, 0.08f);
                 speak(context, message, true);
                 break;
-            case ReminderScheduler.SOUND_FOREST:
-            case ReminderScheduler.SOUND_MOON:
+            case ReminderScheduler.SOUND_MEDITATION_PIANO:
+                playBed(context, R.raw.meditation_piano, 0.38f);
+                break;
+            case ReminderScheduler.SOUND_SOFT_DAYDREAM:
+                playBed(context, R.raw.soft_daydream, 0.34f);
+                break;
             case ReminderScheduler.SOUND_SILENT:
             default:
                 break;
