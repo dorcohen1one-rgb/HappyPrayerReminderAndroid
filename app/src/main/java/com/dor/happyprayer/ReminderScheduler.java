@@ -33,6 +33,7 @@ final class ReminderScheduler {
             {14, 0},
             {20, 0}
     };
+    private static final String EVERY_DAY = "1111111";
 
     private ReminderScheduler() {
     }
@@ -67,8 +68,14 @@ final class ReminderScheduler {
         calendar.set(Calendar.MINUTE, getMinute(context, slot));
         calendar.set(Calendar.SECOND, 0);
         calendar.set(Calendar.MILLISECOND, 0);
-        if (calendar.getTimeInMillis() <= System.currentTimeMillis()) {
-            calendar.add(Calendar.DAY_OF_YEAR, 1);
+        boolean[] days = getDays(context, slot);
+        for (int offset = 0; offset <= 7; offset++) {
+            if (offset > 0 || calendar.getTimeInMillis() <= System.currentTimeMillis()) {
+                calendar.add(Calendar.DAY_OF_YEAR, 1);
+            }
+            if (days[calendar.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY]) {
+                return calendar.getTimeInMillis();
+            }
         }
         return calendar.getTimeInMillis();
     }
@@ -141,6 +148,46 @@ final class ReminderScheduler {
                 .apply();
     }
 
+    static boolean[] getDays(Context context, ReminderSlot slot) {
+        String value = prefs(context).getString(key(slot, "days"), EVERY_DAY);
+        boolean[] result = new boolean[7];
+        boolean hasDay = false;
+        for (int i = 0; i < result.length; i++) {
+            result[i] = value != null && value.length() == 7 && value.charAt(i) == '1';
+            hasDay |= result[i];
+        }
+        if (!hasDay) {
+            for (int i = 0; i < result.length; i++) result[i] = true;
+        }
+        return result;
+    }
+
+    static void saveDays(Context context, ReminderSlot slot, boolean[] days) {
+        StringBuilder value = new StringBuilder(7);
+        boolean hasDay = false;
+        for (int i = 0; i < 7; i++) {
+            boolean selected = days != null && i < days.length && days[i];
+            value.append(selected ? '1' : '0');
+            hasDay |= selected;
+        }
+        prefs(context).edit().putString(key(slot, "days"), hasDay ? value.toString() : EVERY_DAY).apply();
+    }
+
+    static String daysSummary(Context context, ReminderSlot slot) {
+        boolean[] days = getDays(context, slot);
+        int count = 0;
+        for (boolean day : days) if (day) count++;
+        if (count == 7) return "כל יום";
+        String[] labels = {"א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"};
+        StringBuilder summary = new StringBuilder();
+        for (int i = 0; i < days.length; i++) {
+            if (!days[i]) continue;
+            if (summary.length() > 0) summary.append(" · ");
+            summary.append(labels[i]);
+        }
+        return summary.toString();
+    }
+
     static List<ReminderSlot> getSlots(Context context) {
         SharedPreferences preferences = prefs(context);
         String idsValue = preferences.getString("slot_ids", null);
@@ -194,6 +241,7 @@ final class ReminderScheduler {
                 .putInt(key(nextId, "hour"), hour)
                 .putInt(key(nextId, "minute"), minute)
                 .putString(key(nextId, "message"), DEFAULT_MESSAGE)
+                .putString(key(nextId, "days"), EVERY_DAY)
                 .apply();
         return slot;
     }
@@ -214,6 +262,7 @@ final class ReminderScheduler {
                 .remove(key(slot.id, "hour"))
                 .remove(key(slot.id, "minute"))
                 .remove(key(slot.id, "message"))
+                .remove(key(slot.id, "days"))
                 .apply();
         scheduleAll(context);
     }
@@ -322,6 +371,7 @@ final class ReminderScheduler {
             editor.putInt(key(id, "hour"), preferences.getInt(key(id, "hour"), DEFAULT_TIMES[i][0]));
             editor.putInt(key(id, "minute"), preferences.getInt(key(id, "minute"), DEFAULT_TIMES[i][1]));
             editor.putString(key(id, "message"), preferences.getString(key(id, "message"), DEFAULT_MESSAGE));
+            editor.putString(key(id, "days"), preferences.getString(key(id, "days"), EVERY_DAY));
         }
         editor.putString("slot_ids", ids.toString());
         editor.putInt("next_slot_id", DEFAULT_TIMES.length + 1);

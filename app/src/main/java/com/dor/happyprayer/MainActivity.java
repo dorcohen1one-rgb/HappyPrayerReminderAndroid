@@ -71,6 +71,7 @@ public final class MainActivity extends Activity {
         contentReady = true;
         requestNotificationPermissionIfNeeded();
         ReminderScheduler.scheduleAll(this);
+        handler.postDelayed(this::showWelcomeIfNeeded, 450);
     }
 
     @Override protected void onResume() {
@@ -220,6 +221,9 @@ public final class MainActivity extends Activity {
         message.setMaxLines(1);
         message.setEllipsize(TextUtils.TruncateAt.END);
         labels.addView(message);
+        TextView days = text(ReminderScheduler.daysSummary(this, slot), 13, TEAL, Typeface.BOLD);
+        days.setGravity(Gravity.RIGHT);
+        labels.addView(days);
 
         TextView time = text(timeText(ReminderScheduler.getHour(this, slot), ReminderScheduler.getMinute(this, slot)), 22, TEAL, Typeface.BOLD);
         time.setGravity(Gravity.CENTER);
@@ -247,6 +251,9 @@ public final class MainActivity extends Activity {
         Button edit = outlineButton("עריכה");
         edit.setOnClickListener(v -> showReminderEditor(slot));
         controls.addView(edit, new LinearLayout.LayoutParams(dp(110), dp(48)));
+        Button copy = outlineButton("שכפול");
+        copy.setOnClickListener(v -> duplicateReminder(slot));
+        controls.addView(copy, new LinearLayout.LayoutParams(dp(88), dp(48)));
         return row;
     }
 
@@ -298,10 +305,11 @@ public final class MainActivity extends Activity {
 
     private void buildSettings(LinearLayout page) {
         addPageHeading(page, "הגדרות", "רק מה שנחוץ כדי שהתזכורות יעבדו היטב.");
+        addHealthCard(page);
         LinearLayout card = card(Color.argb(240, 255, 255, 255), Color.argb(55, 10, 85, 82));
         page.addView(card);
         CheckBox popup = new CheckBox(this);
-        popup.setText("פתיחת מסך עדין בזמן תזכורת");
+        popup.setText("מסך תזכורת מלא ועדין בזמן תזכורת");
         popup.setTextSize(16);
         popup.setTextColor(INK);
         popup.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
@@ -330,6 +338,10 @@ public final class MainActivity extends Activity {
         Button minute = outlineButton("בדיקה אמיתית בעוד דקה");
         minute.setOnClickListener(v -> scheduleOneMinuteTest());
         card.addView(minute);
+
+        Button feedback = outlineButton("שליחת משוב קצר");
+        feedback.setOnClickListener(v -> showFeedbackDialog());
+        page.addView(feedback);
     }
 
     private void addMiniPlayer(LinearLayout page) {
@@ -410,10 +422,15 @@ public final class MainActivity extends Activity {
         message.setSingleLine(false);
         message.setGravity(Gravity.RIGHT | Gravity.TOP);
         content.addView(message);
+        final boolean[] selectedDays = ReminderScheduler.getDays(this, slot);
+        Button days = outlineButton("ימים: " + ReminderScheduler.daysSummary(this, slot));
+        days.setOnClickListener(v -> showDaysPicker(selectedDays, days));
+        content.addView(days);
         new AlertDialog.Builder(this)
                 .setTitle("עריכת תזכורת")
                 .setView(content)
                 .setNegativeButton("ביטול", null)
+                .setNeutralButton("מחיקה", (dialog, which) -> confirmDelete(slot))
                 .setPositiveButton("שמירה", (dialog, which) -> {
                     int[] parsed = parseTypedTime(time.getText().toString());
                     if (parsed == null) {
@@ -423,9 +440,64 @@ public final class MainActivity extends Activity {
                     saveTitle(slot, title.getText().toString());
                     ReminderScheduler.save(this, slot, ReminderScheduler.isEnabled(this, slot), parsed[0], parsed[1]);
                     ReminderScheduler.saveMessage(this, slot, message.getText().toString());
+                    ReminderScheduler.saveDays(this, slot, selectedDays);
                     ReminderScheduler.scheduleAll(this);
                     refreshContent(false);
                 }).show();
+    }
+
+    private void showDaysPicker(boolean[] selectedDays, Button label) {
+        String[] days = {"יום א׳", "יום ב׳", "יום ג׳", "יום ד׳", "יום ה׳", "יום ו׳", "שבת"};
+        new AlertDialog.Builder(this)
+                .setTitle("באילו ימים תופיע התזכורת?")
+                .setMultiChoiceItems(days, selectedDays, (dialog, which, checked) -> selectedDays[which] = checked)
+                .setNegativeButton("ביטול", null)
+                .setPositiveButton("אישור", (dialog, which) -> {
+                    boolean oneSelected = false;
+                    for (boolean selected : selectedDays) oneSelected |= selected;
+                    if (!oneSelected) {
+                        for (int i = 0; i < selectedDays.length; i++) selectedDays[i] = true;
+                        Toast.makeText(this, "נבחרו כל הימים כדי שלא תישאר תזכורת ריקה", Toast.LENGTH_SHORT).show();
+                    }
+                    label.setText("ימים: " + daysSummary(selectedDays));
+                }).show();
+    }
+
+    private String daysSummary(boolean[] days) {
+        int count = 0;
+        for (boolean day : days) if (day) count++;
+        if (count == 7) return "כל יום";
+        String[] labels = {"א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"};
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < days.length; i++) {
+            if (!days[i]) continue;
+            if (result.length() > 0) result.append(" · ");
+            result.append(labels[i]);
+        }
+        return result.toString();
+    }
+
+    private void confirmDelete(ReminderSlot slot) {
+        new AlertDialog.Builder(this)
+                .setTitle("למחוק את " + slot.title + "?")
+                .setMessage("אי אפשר לשחזר תזכורת שנמחקה.")
+                .setNegativeButton("ביטול", null)
+                .setPositiveButton("מחיקה", (dialog, which) -> {
+                    ReminderScheduler.deleteSlot(this, slot);
+                    refreshContent(false);
+                }).show();
+    }
+
+    private void duplicateReminder(ReminderSlot source) {
+        ReminderSlot copy = ReminderScheduler.addSlot(this);
+        saveTitle(copy, source.title + " (עותק)");
+        ReminderScheduler.save(this, copy, ReminderScheduler.isEnabled(this, source),
+                ReminderScheduler.getHour(this, source), ReminderScheduler.getMinute(this, source));
+        ReminderScheduler.saveMessage(this, copy, ReminderScheduler.getMessage(this, source));
+        ReminderScheduler.saveDays(this, copy, ReminderScheduler.getDays(this, source));
+        ReminderScheduler.scheduleAll(this);
+        Toast.makeText(this, "נוצרה תזכורת חדשה לעריכה", Toast.LENGTH_SHORT).show();
+        refreshContent(false);
     }
 
     private void saveTitle(ReminderSlot slot, String title) {
@@ -455,6 +527,81 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION_REQUEST);
         }
+    }
+
+    private void showWelcomeIfNeeded() {
+        if (isFinishing() || getSharedPreferences(ReminderScheduler.PREFS, MODE_PRIVATE).getBoolean("welcome_seen", false)) return;
+        new AlertDialog.Builder(this)
+                .setTitle("ברוכים הבאים ✦")
+                .setMessage("כדי שהתזכורות יעבדו היטב:\n\n1. אשרו התראות בטלפון.\n2. אשרו דיוק תזכורות אם הטלפון מבקש.\n3. עברו ללשונית תזכורות ובחרו את הזמנים והימים שמתאימים לכם.")
+                .setNegativeButton("אחר כך", (dialog, which) -> markWelcomeSeen())
+                .setPositiveButton("הגדרה מהירה", (dialog, which) -> {
+                    markWelcomeSeen();
+                    section = 1;
+                    refreshContent(false);
+                }).show();
+    }
+
+    private void markWelcomeSeen() {
+        getSharedPreferences(ReminderScheduler.PREFS, MODE_PRIVATE).edit().putBoolean("welcome_seen", true).apply();
+    }
+
+    private void addHealthCard(LinearLayout page) {
+        LinearLayout health = card(Color.argb(238, 232, 248, 246), Color.argb(80, 0, 118, 108));
+        TextView title = text("בדיקת תקינות", 18, INK, Typeface.BOLD);
+        title.setGravity(Gravity.RIGHT);
+        health.addView(title);
+        TextView detail = text(reminderHealthSummary(), 15, MUTED, Typeface.NORMAL);
+        detail.setGravity(Gravity.RIGHT);
+        detail.setLineSpacing(dp(3), 1f);
+        health.addView(detail);
+        Button check = outlineButton("בדיקה מפורטת");
+        check.setOnClickListener(v -> showHealthDialog());
+        health.addView(check);
+        page.addView(health);
+    }
+
+    private String reminderHealthSummary() {
+        int active = 0;
+        for (ReminderSlot slot : ReminderScheduler.getSlots(this)) if (ReminderScheduler.isEnabled(this, slot)) active++;
+        String notifications = notificationsGranted() ? "התראות מאושרות" : "נדרש אישור התראות";
+        String exact = exactAlarmGranted() ? "תזכורות מדויקות פעילות" : "ייתכן עיכוב קל בתזכורות";
+        return active + " תזכורות פעילות · " + notifications + "\n" + exact;
+    }
+
+    private void showHealthDialog() {
+        String notification = notificationsGranted() ? "✓ התראות: מאושרות" : "! התראות: יש לאשר";
+        String exact = exactAlarmGranted() ? "✓ דיוק תזכורות: מאושר" : "! דיוק תזכורות: יש לאשר כדי לקבל התראות בזמן";
+        new AlertDialog.Builder(this)
+                .setTitle("מצב התזכורות")
+                .setMessage(notification + "\n" + exact + "\n\n" + nextReminderTitle() + " — " + nextReminderDetail())
+                .setNegativeButton("סגור", null)
+                .setNeutralButton("אישור התראות", (dialog, which) -> requestNotificationPermissionIfNeeded())
+                .setPositiveButton("אישור דיוק", (dialog, which) -> openExactAlarmSettingsIfNeeded())
+                .show();
+    }
+
+    private boolean notificationsGranted() {
+        return Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean exactAlarmGranted() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true;
+        AlarmManager manager = getSystemService(AlarmManager.class);
+        return manager != null && manager.canScheduleExactAlarms();
+    }
+
+    private void showFeedbackDialog() {
+        String[] choices = {"ממש עוזרת לי", "נעימה, אבל אפשר לשפר", "נתקלתי בבעיה"};
+        new AlertDialog.Builder(this)
+                .setTitle("איך האפליקציה מרגישה לך?")
+                .setSingleChoiceItems(choices, -1, (dialog, which) -> {
+                    getSharedPreferences(ReminderScheduler.PREFS, MODE_PRIVATE).edit().putInt("last_feedback", which).apply();
+                    dialog.dismiss();
+                    Toast.makeText(this, "תודה — המשוב נשמר במכשיר", Toast.LENGTH_LONG).show();
+                })
+                .setNegativeButton("ביטול", null)
+                .show();
     }
 
     private void openExactAlarmSettingsIfNeeded() {
@@ -499,7 +646,13 @@ public final class MainActivity extends Activity {
         ReminderSlot slot = nextSlot();
         if (slot == null) return "עברו ללשונית תזכורות כדי להוסיף אחת חדשה.";
         long at = ReminderScheduler.nextTriggerMillis(this, slot);
-        return "היום בשעה " + DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(at));
+        Calendar today = Calendar.getInstance();
+        Calendar next = Calendar.getInstance();
+        next.setTimeInMillis(at);
+        String prefix = today.get(Calendar.YEAR) == next.get(Calendar.YEAR)
+                && today.get(Calendar.DAY_OF_YEAR) == next.get(Calendar.DAY_OF_YEAR)
+                ? "היום" : DateFormat.getDateInstance(DateFormat.SHORT).format(new Date(at));
+        return prefix + " בשעה " + DateFormat.getTimeInstance(DateFormat.SHORT).format(new Date(at));
     }
 
     private ReminderSlot nextSlot() {
