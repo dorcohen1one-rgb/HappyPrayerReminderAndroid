@@ -432,18 +432,17 @@ public final class MainActivity extends Activity {
     }
 
     private void showPersonalAudioDialog() {
-        String[] choices = ReminderScheduler.hasPersonalAudio(this)
-                ? new String[]{"הקלטת מילים בקול שלי", "בחירת קובץ צליל מהמכשיר", "מחיקת הצליל האישי"}
-                : new String[]{"הקלטת מילים בקול שלי", "בחירת קובץ צליל מהמכשיר"};
-        new AlertDialog.Builder(this)
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this)
                 .setTitle("הצליל שלי")
-                .setItems(choices, (dialog, which) -> {
-                    if (which == 0) requestRecording();
-                    else if (which == 1) pickPersonalAudio();
-                    else clearPersonalAudio();
-                })
-                .setNegativeButton("ביטול", null)
-                .show();
+                .setMessage("בחרו פעולה אחת. אפשר להקליט מילים עכשיו או לבחור קובץ צליל שכבר נמצא בטלפון.")
+                .setPositiveButton("הקלטה חדשה", (ignored, which) -> requestRecording())
+                .setNeutralButton("בחירת קובץ", (ignored, which) -> pickPersonalAudio());
+        if (ReminderScheduler.hasPersonalAudio(this)) {
+            dialog.setNegativeButton("מחיקת הצליל", (ignored, which) -> clearPersonalAudio());
+        } else {
+            dialog.setNegativeButton("ביטול", null);
+        }
+        dialog.show();
     }
 
     private void requestRecording() {
