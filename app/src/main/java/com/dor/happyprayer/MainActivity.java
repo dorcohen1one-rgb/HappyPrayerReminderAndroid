@@ -52,12 +52,13 @@ public final class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION_REQUEST = 42;
     private static final int RECORD_AUDIO_PERMISSION_REQUEST = 43;
     private static final int PICK_PERSONAL_AUDIO_REQUEST = 44;
-    private static final int INK = Color.rgb(20, 35, 52);
-    private static final int MUTED = Color.rgb(79, 96, 111);
-    private static final int TEAL = Color.rgb(0, 118, 108);
-    private static final int DEEP_TEAL = Color.rgb(0, 82, 78);
-    private static final int GOLD = Color.rgb(208, 151, 43);
-    private static final int SKY = Color.rgb(235, 247, 250);
+    private static final int INK = Color.rgb(19, 44, 49);
+    private static final int MUTED = Color.rgb(97, 115, 122);
+    private static final int TEAL = Color.rgb(20, 120, 111);
+    private static final int DEEP_TEAL = Color.rgb(20, 63, 75);
+    private static final int GOLD = Color.rgb(245, 198, 106);
+    private static final int SKY = Color.rgb(240, 248, 247);
+    private static final int ROSE = Color.rgb(214, 79, 126);
     private static final String[] MUSIC_DESCRIPTIONS = {
             "קטע פסנתר אמיתי, רגוע ומלא.",
             "פסנתר אמיתי ואווירה חולמנית, רכה ואיטית.",
@@ -121,7 +122,7 @@ public final class MainActivity extends Activity {
 
         LinearLayout page = new LinearLayout(this);
         page.setOrientation(LinearLayout.VERTICAL);
-        page.setPadding(dp(20), dp(22), dp(20), dp(24));
+        page.setPadding(dp(18), dp(18), dp(18), dp(24));
         scroll.addView(page);
 
         addTopBar(page);
@@ -142,56 +143,55 @@ public final class MainActivity extends Activity {
         row.setOrientation(LinearLayout.HORIZONTAL);
         page.addView(row, matchWrap());
 
-        TextView title = text("שכולם מאושרים", 24, INK, Typeface.BOLD);
+        TextView title = text("תזכורת תפילה", 23, INK, Typeface.BOLD);
         title.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
         row.addView(title, new LinearLayout.LayoutParams(0, dp(46), 1));
 
-        TextView mark = text("✦", 28, GOLD, Typeface.BOLD);
+        TextView mark = text("♥", 27, ROSE, Typeface.BOLD);
         mark.setGravity(Gravity.CENTER);
         row.addView(mark, new LinearLayout.LayoutParams(dp(42), dp(46)));
     }
 
     private void buildHome(LinearLayout page) {
-        TextView eyebrow = text(greeting(), 15, DEEP_TEAL, Typeface.BOLD);
-        eyebrow.setGravity(Gravity.RIGHT);
-        page.addView(eyebrow, matchWrap());
-
-        LinearLayout quote = card(Color.argb(238, 255, 255, 255), Color.argb(90, 255, 255, 255));
-        quote.setPadding(dp(22), dp(24), dp(22), dp(22));
-        page.addView(quote);
-        TextView label = text("המשפט של היום", 14, TEAL, Typeface.BOLD);
-        label.setGravity(Gravity.RIGHT);
-        quote.addView(label);
-        TextView opening = text(DailyOpening.today(), 26, INK, Typeface.BOLD);
-        opening.setGravity(Gravity.RIGHT);
+        LinearLayout hero = darkCard();
+        hero.setPadding(dp(24), dp(24), dp(24), dp(24));
+        page.addView(hero);
+        TextView heart = text("♥", 48, Color.rgb(255, 214, 227), Typeface.BOLD);
+        heart.setGravity(Gravity.CENTER);
+        hero.addView(heart);
+        TextView label = text("הכוונה של היום", 14, Color.rgb(214, 245, 238), Typeface.BOLD);
+        label.setGravity(Gravity.CENTER);
+        hero.addView(label);
+        TextView opening = text(DailyOpening.today(), 27, Color.WHITE, Typeface.BOLD);
+        opening.setGravity(Gravity.CENTER);
         opening.setLineSpacing(dp(5), 1f);
         LinearLayout.LayoutParams openingParams = matchWrap();
-        openingParams.setMargins(0, dp(10), 0, 0);
-        quote.addView(opening, openingParams);
-        TextView hint = text("מחר יחכה כאן משפט חדש.", 15, MUTED, Typeface.NORMAL);
-        hint.setGravity(Gravity.RIGHT);
+        openingParams.setMargins(0, dp(8), 0, 0);
+        hero.addView(opening, openingParams);
+        TextView hint = text(greeting() + " · רגע קטן של טוב", 15, Color.rgb(211, 245, 237), Typeface.NORMAL);
+        hint.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams hintParams = matchWrap();
-        hintParams.setMargins(0, dp(14), 0, 0);
-        quote.addView(hint, hintParams);
+        hintParams.setMargins(0, dp(12), 0, 0);
+        hero.addView(hint, hintParams);
 
-        LinearLayout next = darkCard();
+        LinearLayout next = card(Color.WHITE, Color.rgb(224, 239, 235));
         page.addView(next);
-        TextView nextLabel = text("התזכורת הקרובה", 14, Color.rgb(174, 232, 221), Typeface.BOLD);
+        TextView nextLabel = text("התזכורת הקרובה", 14, TEAL, Typeface.BOLD);
         nextLabel.setGravity(Gravity.RIGHT);
         next.addView(nextLabel);
-        TextView nextTitle = text(nextReminderTitle(), 23, Color.WHITE, Typeface.BOLD);
+        TextView nextTitle = text(nextReminderTitle(), 23, INK, Typeface.BOLD);
         nextTitle.setGravity(Gravity.RIGHT);
         LinearLayout.LayoutParams nextTitleParams = matchWrap();
         nextTitleParams.setMargins(0, dp(6), 0, 0);
         next.addView(nextTitle, nextTitleParams);
-        TextView nextDetail = text(nextReminderDetail(), 16, Color.rgb(221, 246, 242), Typeface.NORMAL);
+        TextView nextDetail = text(nextReminderDetail(), 16, MUTED, Typeface.NORMAL);
         nextDetail.setGravity(Gravity.RIGHT);
         next.addView(nextDetail);
-        Button pause = primaryButton("רגע של שקט");
+        Button pause = roseButton("רגע של שקט  ✦");
         pause.setOnClickListener(v -> { section = 2; refreshContent(false); });
         next.addView(pause);
 
-        LinearLayout practice = card(Color.argb(232, 255, 253, 248), Color.argb(55, 208, 151, 43));
+        LinearLayout practice = card(Color.rgb(244, 251, 249), Color.rgb(215, 237, 231));
         page.addView(practice);
         TextView practiceTitle = text("כוונה קטנה להיום", 19, INK, Typeface.BOLD);
         practiceTitle.setGravity(Gravity.RIGHT);
@@ -281,8 +281,8 @@ public final class MainActivity extends Activity {
         int selected = ReminderScheduler.getSoundMode(this);
         for (int i = 0; i < ReminderScheduler.SOUND_LABELS.length; i++) {
             final int mode = i;
-            LinearLayout track = card(i == selected ? Color.rgb(229, 247, 243) : Color.argb(240, 255, 255, 255),
-                    i == selected ? Color.rgb(94, 173, 160) : Color.argb(60, 10, 85, 82));
+            LinearLayout track = card(i == selected ? Color.rgb(232, 247, 243) : Color.WHITE,
+                    i == selected ? Color.rgb(74, 166, 150) : Color.rgb(225, 237, 234));
             TextView name = text(ReminderScheduler.SOUND_LABELS[i], 19, INK, Typeface.BOLD);
             name.setGravity(Gravity.RIGHT);
             track.addView(name);
@@ -302,7 +302,7 @@ public final class MainActivity extends Activity {
             page.addView(track);
         }
 
-        LinearLayout duration = card(Color.argb(238, 255, 255, 255), Color.argb(55, 10, 85, 82));
+        LinearLayout duration = card(Color.WHITE, Color.rgb(225, 237, 234));
         page.addView(duration);
         TextView durationTitle = text("כמה לשמוע בכל פעם?", 18, INK, Typeface.BOLD);
         durationTitle.setGravity(Gravity.RIGHT);
@@ -890,8 +890,8 @@ public final class MainActivity extends Activity {
     private LinearLayout card(int color, int stroke) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(18), dp(18), dp(18), dp(18));
-        card.setBackground(round(color, stroke, 12));
+        card.setPadding(dp(19), dp(19), dp(19), dp(19));
+        card.setBackground(round(color, stroke, 22));
         LinearLayout.LayoutParams params = matchWrap();
         params.setMargins(0, dp(8), 0, dp(8));
         card.setLayoutParams(params);
@@ -899,34 +899,40 @@ public final class MainActivity extends Activity {
     }
 
     private LinearLayout darkCard() {
-        LinearLayout card = card(Color.argb(236, 0, 76, 75), Color.argb(120, 159, 226, 214));
-        card.setBackground(gradient(new int[]{Color.rgb(0, 76, 75), Color.rgb(10, 106, 100)}));
+        LinearLayout card = card(Color.argb(236, 20, 63, 75), Color.argb(120, 126, 217, 202));
+        card.setBackground(gradient(new int[]{Color.rgb(20, 63, 75), Color.rgb(20, 120, 111)}));
         return card;
     }
 
     private Button primaryButton(String label) {
         Button button = baseButton(label, Color.WHITE, 17);
-        button.setBackground(gradient(new int[]{Color.rgb(0, 125, 113), Color.rgb(0, 154, 136)}));
+        button.setBackground(gradient(new int[]{Color.rgb(20, 120, 111), Color.rgb(25, 151, 134)}));
+        return button;
+    }
+
+    private Button roseButton(String label) {
+        Button button = baseButton(label, Color.WHITE, 17);
+        button.setBackground(gradient(new int[]{Color.rgb(240, 119, 156), ROSE}));
         return button;
     }
 
     private Button outlineButton(String label) {
         Button button = baseButton(label, TEAL, 15);
-        button.setBackground(round(Color.TRANSPARENT, Color.rgb(128, 183, 174), 10));
+        button.setBackground(round(Color.TRANSPARENT, Color.rgb(143, 196, 186), 16));
         return button;
     }
 
     private Button compactButton(String label, boolean selected) {
         Button button = baseButton(label, selected ? Color.WHITE : TEAL, 14);
         button.setBackground(round(selected ? TEAL : Color.TRANSPARENT,
-                selected ? TEAL : Color.rgb(128, 183, 174), 10));
+                selected ? TEAL : Color.rgb(143, 196, 186), 14));
         return button;
     }
 
     private Button navButton(String label, boolean selected) {
         Button button = baseButton(label, selected ? TEAL : MUTED, 13);
         button.setPadding(dp(2), 0, dp(2), 0);
-        button.setBackground(round(selected ? Color.rgb(221, 244, 240) : Color.TRANSPARENT, Color.TRANSPARENT, 10));
+        button.setBackground(round(selected ? Color.rgb(222, 244, 239) : Color.TRANSPARENT, Color.TRANSPARENT, 16));
         return button;
     }
 
@@ -965,7 +971,7 @@ public final class MainActivity extends Activity {
 
     private GradientDrawable gradient(int[] colors) {
         GradientDrawable drawable = new GradientDrawable(GradientDrawable.Orientation.TL_BR, colors);
-        drawable.setCornerRadius(dp(12));
+        drawable.setCornerRadius(dp(18));
         return drawable;
     }
 
@@ -979,7 +985,7 @@ public final class MainActivity extends Activity {
 
     private void styleSystemBars() {
         Window window = getWindow();
-        window.setStatusBarColor(Color.rgb(230, 245, 248));
+        window.setStatusBarColor(Color.rgb(244, 248, 248));
         window.setNavigationBarColor(Color.WHITE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
     }
@@ -992,10 +998,10 @@ public final class MainActivity extends Activity {
         @Override protected void onDraw(Canvas canvas) {
             float w = getWidth(), h = getHeight();
             paint.setShader(new LinearGradient(0, 0, 0, h,
-                    new int[]{Color.rgb(231, 246, 249), Color.rgb(249, 252, 246), Color.rgb(239, 248, 245)}, null, Shader.TileMode.CLAMP));
+                    new int[]{Color.rgb(247, 245, 255), Color.rgb(251, 253, 253), Color.rgb(232, 246, 243)}, null, Shader.TileMode.CLAMP));
             canvas.drawRect(0, 0, w, h, paint);
             paint.setShader(new RadialGradient(w * .82f, h * .08f, w * .5f,
-                    new int[]{Color.argb(105, 255, 206, 115), Color.argb(30, 255, 235, 191), Color.TRANSPARENT}, null, Shader.TileMode.CLAMP));
+                    new int[]{Color.argb(80, 239, 196, 176), Color.argb(25, 235, 215, 255), Color.TRANSPARENT}, null, Shader.TileMode.CLAMP));
             canvas.drawCircle(w * .82f, h * .08f, w * .5f, paint);
             paint.setShader(null);
             paint.setColor(Color.argb(36, 0, 118, 108));
