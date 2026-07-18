@@ -38,6 +38,10 @@ import android.widget.Toast;
 
 import java.text.DateFormat;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -64,6 +68,8 @@ public final class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ReminderSoundPlayer previewPlayer;
     private MediaRecorder personalRecorder;
+    private File personalRecordingFile;
+    private long personalRecordingStartedAt;
     private ScrollView contentScrollView;
     private int section = 0;
     private boolean contentReady;
@@ -257,7 +263,7 @@ public final class MainActivity extends Activity {
         Button edit = outlineButton("עריכה");
         edit.setOnClickListener(v -> showReminderEditor(slot));
         controls.addView(edit, new LinearLayout.LayoutParams(dp(110), dp(48)));
-        Button copy = outlineButton("שכפול");
+        Button copy = outlineButton("+ תזכורת דומה");
         copy.setOnClickListener(v -> duplicateReminder(slot));
         controls.addView(copy, new LinearLayout.LayoutParams(dp(88), dp(48)));
         return row;
@@ -451,7 +457,8 @@ public final class MainActivity extends Activity {
 
     private void startPersonalRecording() {
         if (personalRecorder != null) return;
-        File destination = new File(getFilesDir(), "my_prayer_words.m4a");
+        File destination = new File(getFilesDir(), "my_prayer_words_pending.m4a");
+        if (destination.exists()) destination.delete();
         try {
             personalRecorder = new MediaRecorder();
             personalRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
@@ -462,6 +469,8 @@ public final class MainActivity extends Activity {
             personalRecorder.setAudioSamplingRate(44_100);
             personalRecorder.prepare();
             personalRecorder.start();
+            personalRecordingFile = destination;
+            personalRecordingStartedAt = System.currentTimeMillis();
         } catch (Exception error) {
             stopPersonalRecording(false);
             Toast.makeText(this, "לא הצלחנו להתחיל הקלטה", Toast.LENGTH_LONG).show();
@@ -478,20 +487,28 @@ public final class MainActivity extends Activity {
 
     private void stopPersonalRecording(boolean save) {
         if (personalRecorder == null) return;
+        boolean recorderStopped = true;
         try {
             personalRecorder.stop();
         } catch (RuntimeException ignored) {
-            save = false;
+            recorderStopped = false;
         }
         personalRecorder.reset();
         personalRecorder.release();
         personalRecorder = null;
-        if (save) {
-            ReminderScheduler.savePersonalAudioUri(this, Uri.fromFile(new File(getFilesDir(), "my_prayer_words.m4a")).toString());
-            ReminderScheduler.saveSoundMode(this, ReminderScheduler.SOUND_PERSONAL);
-            Toast.makeText(this, "ההקלטה נשמרה ונבחרה", Toast.LENGTH_SHORT).show();
-            refreshContent(true);
+        long recordingLength = System.currentTimeMillis() - personalRecordingStartedAt;
+        File recording = personalRecordingFile;
+        personalRecordingFile = null;
+        personalRecordingStartedAt = 0L;
+        if (save && recorderStopped && recording != null && recordingLength >= 500 && recording.length() > 1024) {
+            if (savePersonalAudioFile(recording)) {
+                Toast.makeText(this, "ההקלטה נשמרה ונבחרה", Toast.LENGTH_SHORT).show();
+                refreshContent(true);
+                return;
+            }
         }
+        if (recording != null && recording.exists()) recording.delete();
+        if (save) Toast.makeText(this, "לא נשמרה הקלטה — נסו לדבר לפחות שנייה אחת", Toast.LENGTH_LONG).show();
     }
 
     private void pickPersonalAudio() {
@@ -505,6 +522,8 @@ public final class MainActivity extends Activity {
     private void clearPersonalAudio() {
         ReminderScheduler.savePersonalAudioUri(this, "");
         ReminderScheduler.saveSoundMode(this, ReminderScheduler.SOUND_MEDITATION_PIANO);
+        new File(getFilesDir(), "my_prayer_words.m4a").delete();
+        new File(getFilesDir(), "my_prayer_words_pending.m4a").delete();
         Toast.makeText(this, "הצליל האישי הוסר", Toast.LENGTH_SHORT).show();
         refreshContent(true);
     }
@@ -523,15 +542,62 @@ public final class MainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode != PICK_PERSONAL_AUDIO_REQUEST || resultCode != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
-        try {
-            getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        } catch (SecurityException ignored) {
-            // Some providers do not offer persistent access; playback can still work for this session.
+        try (InputStream input = getContentResolver().openInputStream(uri)) {
+            if (input == null || !savePersonalAudio(input)) {
+                Toast.makeText(this, "לא הצלחנו לשמור את קובץ הצליל", Toast.LENGTH_LONG).show();
+                return;
+            }
+        } catch (IOException | SecurityException error) {
+            Toast.makeText(this, "לא הצלחנו לקרוא את קובץ הצליל", Toast.LENGTH_LONG).show();
+            return;
         }
-        ReminderScheduler.savePersonalAudioUri(this, uri.toString());
-        ReminderScheduler.saveSoundMode(this, ReminderScheduler.SOUND_PERSONAL);
         Toast.makeText(this, "הצליל האישי נשמר ונבחר", Toast.LENGTH_SHORT).show();
         refreshContent(true);
+    }
+
+    /** Copies chosen audio into app storage so it remains available after the file picker closes. */
+    private boolean savePersonalAudio(InputStream input) throws IOException {
+        File temporary = new File(getFilesDir(), "my_prayer_words_importing.m4a");
+        long total = 0L;
+        try (FileOutputStream output = new FileOutputStream(temporary)) {
+            byte[] buffer = new byte[32 * 1024];
+            int count;
+            while ((count = input.read(buffer)) != -1) {
+                total += count;
+                if (total > 25L * 1024L * 1024L) {
+                    temporary.delete();
+                    return false;
+                }
+                output.write(buffer, 0, count);
+            }
+        }
+        if (total < 1024) {
+            temporary.delete();
+            return false;
+        }
+        return savePersonalAudioFile(temporary);
+    }
+
+    private boolean savePersonalAudioFile(File source) {
+        File destination = new File(getFilesDir(), "my_prayer_words.m4a");
+        if (source == null || !source.isFile() || source.length() < 1024) return false;
+        if (destination.exists() && !destination.delete()) return false;
+        boolean moved = source.renameTo(destination);
+        if (!moved) {
+            try (InputStream input = new FileInputStream(source);
+                 FileOutputStream output = new FileOutputStream(destination)) {
+                byte[] buffer = new byte[32 * 1024];
+                int count;
+                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            } catch (IOException error) {
+                destination.delete();
+                return false;
+            }
+            source.delete();
+        }
+        ReminderScheduler.savePersonalAudioUri(this, Uri.fromFile(destination).toString());
+        ReminderScheduler.saveSoundMode(this, ReminderScheduler.SOUND_PERSONAL);
+        return true;
     }
 
     private void showReminderEditor(ReminderSlot slot) {
@@ -617,7 +683,7 @@ public final class MainActivity extends Activity {
 
     private void duplicateReminder(ReminderSlot source) {
         ReminderSlot copy = ReminderScheduler.addSlot(this);
-        saveTitle(copy, source.title + " (עותק)");
+        saveTitle(copy, source.title);
         ReminderScheduler.save(this, copy, ReminderScheduler.isEnabled(this, source),
                 ReminderScheduler.getHour(this, source), ReminderScheduler.getMinute(this, source));
         ReminderScheduler.saveMessage(this, copy, ReminderScheduler.getMessage(this, source));
