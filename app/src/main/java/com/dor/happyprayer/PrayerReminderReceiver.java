@@ -70,7 +70,7 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
                 .setAutoCancel(true);
         // When the immersive popup is active it owns the audio. Playing the old notification
         // sample at the same time caused the harsh, doubled sound users could hear.
-        if (!ReminderScheduler.isPopupEnabled(context)) {
+        if (!ReminderScheduler.isPopupEnabled(context) && soundMode != ReminderScheduler.SOUND_SILENT) {
             builder.setSound(soundUri(context, soundMode));
         } else {
             builder.setSound(null);
@@ -121,7 +121,7 @@ public final class PrayerReminderReceiver extends BroadcastReceiver {
                 NotificationManager.IMPORTANCE_HIGH
         );
         channel.setDescription("תזכורות יומיות שכולם יהיו מאושרים ושמחים");
-        if (ReminderScheduler.isPopupEnabled(context)) {
+        if (ReminderScheduler.isPopupEnabled(context) || soundMode == ReminderScheduler.SOUND_SILENT) {
             channel.setSound(null, null);
         } else {
             channel.setSound(soundUri(context, soundMode), attributes);

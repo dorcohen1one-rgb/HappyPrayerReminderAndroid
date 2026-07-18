@@ -21,12 +21,18 @@ final class ReminderScheduler {
     static final int SOUND_SOFT_CHIMES = 2;
     static final int SOUND_VOICE = 3;
     static final int SOUND_MANTRA = 4;
+    static final int SOUND_FOREST = 5;
+    static final int SOUND_MOON = 6;
+    static final int SOUND_SILENT = 7;
     static final String[] SOUND_LABELS = {
             "פעמונים שקטים",
             "מרחב נשימה",
             "אור ראשון",
             "קול מונחה",
-            "מנטרה מונחית"
+            "מנטרה מונחית",
+            "יער שקט",
+            "נשימת ירח",
+            "ללא מנגינה"
     };
     private static final int[][] DEFAULT_TIMES = {
             {9, 0},

@@ -21,8 +21,10 @@ final class ReminderSoundPlayer {
 
     void play(Context context, int soundMode, String message, int seconds) {
         stop();
-        soundscape = new ProceduralSoundscape();
-        soundscape.play(soundMode, seconds);
+        if (soundMode != ReminderScheduler.SOUND_SILENT) {
+            soundscape = new ProceduralSoundscape();
+            soundscape.play(soundMode, seconds);
+        }
         switch (soundMode) {
             case ReminderScheduler.SOUND_BELL:
                 playAccent(context, R.raw.gentle_bell, 0.18f);
@@ -41,6 +43,9 @@ final class ReminderSoundPlayer {
                 playBed(context, R.raw.soft_chimes, 0.08f);
                 speak(context, message, true);
                 break;
+            case ReminderScheduler.SOUND_FOREST:
+            case ReminderScheduler.SOUND_MOON:
+            case ReminderScheduler.SOUND_SILENT:
             default:
                 break;
         }

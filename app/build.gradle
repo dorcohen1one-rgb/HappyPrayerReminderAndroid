@@ -23,8 +23,8 @@ android {
         applicationId "com.dor.happyprayer"
         minSdk 23
         targetSdk 35
-        versionCode 102
-        versionName "1.2"
+        versionCode 103
+        versionName "1.3"
     }
 
     signingConfigs {
