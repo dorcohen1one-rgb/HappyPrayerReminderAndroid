@@ -205,13 +205,23 @@ public final class MainActivity extends Activity {
     private void buildReminders(LinearLayout page) {
         addPageHeading(page, "תזכורות", "הזמנים האישיים שלכם לאורך היום.");
         for (ReminderSlot slot : ReminderScheduler.getSlots(this)) page.addView(reminderRow(slot));
-        Button add = primaryButton("+ הוספת תזכורת");
+        LinearLayout invitation = card(Color.argb(232, 240, 252, 249), Color.argb(75, 0, 118, 108));
+        TextView invitationTitle = text("רוצים להוסיף עוד רגע קטן של אור?", 19, INK, Typeface.BOLD);
+        invitationTitle.setGravity(Gravity.RIGHT);
+        invitation.addView(invitationTitle);
+        TextView invitationText = text("אפשר לבחור זמן נוסף, משפט אישי וימים שמתאימים לכם.", 15, MUTED, Typeface.NORMAL);
+        invitationText.setGravity(Gravity.RIGHT);
+        LinearLayout.LayoutParams invitationTextParams = matchWrap();
+        invitationTextParams.setMargins(0, dp(6), 0, dp(10));
+        invitation.addView(invitationText, invitationTextParams);
+        Button add = primaryButton("כן, להוסיף תזכורת");
         add.setOnClickListener(v -> {
             ReminderSlot slot = ReminderScheduler.addSlot(this);
             ReminderScheduler.schedule(this, slot);
             refreshContent(false);
         });
-        page.addView(add);
+        invitation.addView(add);
+        page.addView(invitation);
     }
 
     private View reminderRow(ReminderSlot slot) {
@@ -263,9 +273,6 @@ public final class MainActivity extends Activity {
         Button edit = outlineButton("עריכה");
         edit.setOnClickListener(v -> showReminderEditor(slot));
         controls.addView(edit, new LinearLayout.LayoutParams(dp(110), dp(48)));
-        Button copy = outlineButton("+ תזכורת דומה");
-        copy.setOnClickListener(v -> duplicateReminder(slot));
-        controls.addView(copy, new LinearLayout.LayoutParams(dp(88), dp(48)));
         return row;
     }
 
@@ -678,18 +685,6 @@ public final class MainActivity extends Activity {
                     ReminderScheduler.deleteSlot(this, slot);
                     refreshContent(false);
                 }).show();
-    }
-
-    private void duplicateReminder(ReminderSlot source) {
-        ReminderSlot copy = ReminderScheduler.addSlot(this);
-        saveTitle(copy, source.title);
-        ReminderScheduler.save(this, copy, ReminderScheduler.isEnabled(this, source),
-                ReminderScheduler.getHour(this, source), ReminderScheduler.getMinute(this, source));
-        ReminderScheduler.saveMessage(this, copy, ReminderScheduler.getMessage(this, source));
-        ReminderScheduler.saveDays(this, copy, ReminderScheduler.getDays(this, source));
-        ReminderScheduler.scheduleAll(this);
-        Toast.makeText(this, "נוצרה תזכורת חדשה לעריכה", Toast.LENGTH_SHORT).show();
-        refreshContent(false);
     }
 
     private void saveTitle(ReminderSlot slot, String title) {
